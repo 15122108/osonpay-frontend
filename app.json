@@ -1,0 +1,52 @@
+{
+  "expo": {
+    "name": "Oson Pay",
+    "slug": "oson-pay",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "osonpay",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "image": "./assets/images/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0D0A14"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "uz.osonpay.app",
+      "infoPlist": {
+        "NSFaceIDUsageDescription": "Tezkor kirish uchun Face ID ishlatiladi"
+      }
+    },
+    "android": {
+      "package": "uz.osonpay.app",
+      "versionCode": 1,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "backgroundColor": "#0D0A14"
+      },
+      "permissions": [
+        "android.permission.USE_BIOMETRIC",
+        "android.permission.USE_FINGERPRINT",
+        "android.permission.VIBRATE"
+      ],
+      "googleServicesFile": "./google-services.json"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-font",
+      "expo-local-authentication",
+      "@react-native-firebase/app",
+      "@react-native-firebase/auth"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "EXPO_PROJECT_ID_REPLACE_ME"
+      }
+    }
+  }
+}
