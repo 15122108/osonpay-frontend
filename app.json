@@ -4,7 +4,7 @@
     "slug": "oson-pay",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/adaptive-icon.png",
     "scheme": "osonpay",
     "userInterfaceStyle": "dark",
     "splash": {
@@ -30,23 +30,24 @@
         "android.permission.USE_BIOMETRIC",
         "android.permission.USE_FINGERPRINT",
         "android.permission.VIBRATE"
-      ],
-      "googleServicesFile": "./google-services.json"
+      ]
     },
     "plugins": [
       "expo-router",
       "expo-font",
-      "expo-local-authentication",
-      "@react-native-firebase/app",
-      "@react-native-firebase/auth"
+      "expo-local-authentication"
     ],
     "experiments": {
       "typedRoutes": true
     },
     "extra": {
+      "router": {
+        "origin": false
+      },
       "eas": {
-        "projectId": "EXPO_PROJECT_ID_REPLACE_ME"
+        "projectId": "9c059d6b-ccfb-4baf-be46-b8bcdef54dda"
       }
-    }
+    },
+    "owner": "farhod1512"
   }
 }

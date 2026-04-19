@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-export const BASE_URL = 'https://osonpay-backend.onrender.com/api';
+export const BASE_URL = 'https://osonpay-backend-1.onrender.com/api';
 
 async function req(method: string, path: string, body?: any) {
   const token = await AsyncStorage.getItem('token');

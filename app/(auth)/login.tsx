@@ -7,7 +7,6 @@ import { router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { C, S, R } from '../../constants/theme';
 import { api } from '../../services/api';
-import { firebaseSendOTP, firebaseVerifyOTP } from '../../services/firebase';
 import { useAuth } from '../../hooks/useAuth';
 import { useLang } from '../../hooks/useLang';
 
@@ -60,8 +59,7 @@ export default function Login() {
     if (digits.length < 12) { Alert.alert(t('error'), t('enterPhone')); return; }
     setLoading(true);
     try {
-      // Firebase orqali SMS yuborish
-      await firebaseSendOTP(e164);
+
       setStep('otp');
       startTimer();
     } catch(e:any) {
@@ -78,11 +76,6 @@ export default function Login() {
   async function verifyOTP(code: string) {
     setLoading(true);
     try {
-      // Firebase OTP tasdiqlash
-      const firebaseToken = await firebaseVerifyOTP(code);
-
-      // Backend ga Firebase token yuborish
-      const res = await api.firebaseLogin(firebaseToken, name || 'Foydalanuvchi');
 
       if (res.isNewUser && !name) {
         setLoading(false);
@@ -104,8 +97,7 @@ export default function Login() {
     if (!name.trim()) return;
     setLoading(true);
     try {
-      const firebaseToken = await firebaseVerifyOTP(otp.join(''));
-      const res = await api.firebaseLogin(firebaseToken, name);
+
       await login(res.token, res.user, res.hasPin);
       router.replace('/(auth)/create-pin');
     } catch(e:any) {
@@ -140,13 +132,10 @@ export default function Login() {
                   value={dispPhone()}
                   onChangeText={t=>setPhone(t.replace(/\D/g,''))}
                   keyboardType="phone-pad"
-                  placeholder="+998 90 123 45 67"
+                  placeholder="+998"
                   placeholderTextColor={C.t3}
                   maxLength={17}
                 />
-              </View>
-              <View style={ls.firebaseBadge}>
-                <Text style={ls.firebaseTxt}>🔒 Google Firebase orqali xavfsiz SMS</Text>
               </View>
               <TouchableOpacity
                 onPress={sendOTP}
@@ -249,8 +238,6 @@ const ls = StyleSheet.create({
   sub: {fontSize:14, color:C.t2, lineHeight:20},
   phoneBox: {flexDirection:'row', alignItems:'center', gap:10, backgroundColor:C.elevated, borderRadius:R.lg, borderWidth:1.5, borderColor:C.border, paddingHorizontal:S.md, height:58},
   phoneField: {flex:1, fontSize:18, fontWeight:'600', color:C.t1, letterSpacing:0.5},
-  firebaseBadge: {backgroundColor:'rgba(66,133,244,0.15)', borderRadius:R.md, padding:S.sm, borderWidth:1, borderColor:'rgba(66,133,244,0.3)', alignItems:'center'},
-  firebaseTxt: {fontSize:12, color:'#4285F4', fontWeight:'600'},
   btnWrap: {borderRadius:R.xl, overflow:'hidden'},
   btn: {height:58, alignItems:'center', justifyContent:'center'},
   btnTxt: {fontSize:17, fontWeight:'800', color:'#FFF'},
