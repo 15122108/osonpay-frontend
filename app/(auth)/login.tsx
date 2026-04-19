@@ -1,7 +1,8 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  SafeAreaView, KeyboardAvoidingView, Platform, Alert, ActivityIndicator
+  SafeAreaView, KeyboardAvoidingView, Platform, Alert,
+  ActivityIndicator, Dimensions,
 } from 'react-native';
 import { router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -10,240 +11,334 @@ import { api } from '../../services/api';
 import { useAuth } from '../../hooks/useAuth';
 import { useLang } from '../../hooks/useLang';
 
-function Logo() {
-  return (
-    <View style={ls.logoWrap}>
-      <View style={ls.logoCircle}>
-        <LinearGradient colors={['#7B2FBE','#C44AFF','#FF6B00']} start={{x:0,y:0}} end={{x:1,y:1}} style={ls.logoGrad}>
-          <Text style={ls.logoP}>P</Text>
-        </LinearGradient>
-      </View>
-      <View style={ls.titleRow}>
-        <Text style={ls.titleOson}>Oson</Text>
-        <Text style={ls.titlePay}>Pay</Text>
-      </View>
-      <Text style={ls.tagline}>Tez. Oson. Ishonchli.</Text>
-    </View>
-  );
-}
+const { width } = Dimensions.get('window');
 
 export default function Login() {
   const { t, lang, changeLang } = useLang();
   const { login } = useAuth();
-  const [step, setStep] = useState<'phone'|'otp'|'name'>('phone');
-  const [phone, setPhone] = useState('998');
-  const [otp, setOtp] = useState(['','','','','','']);
-  const [name, setName] = useState('');
-  const [loading, setLoading] = useState(false);
+
+  const [step, setStep]           = useState<'phone'|'otp'|'name'>('phone');
+  const [phone, setPhone]         = useState('');
+  const [otp, setOtp]             = useState(['','','','','','']);
+  const [name, setName]           = useState('');
+  const [loading, setLoading]     = useState(false);
   const [countdown, setCountdown] = useState(0);
-  const refs = useRef<any[]>([]);
+  const otpRefs  = useRef<any[]>([]);
+  const timerRef = useRef<any>(null);
 
-  const digits = phone.replace(/\D/g,'');
-  const e164 = `+${digits.startsWith('998') ? digits : '998'+digits}`;
+  useEffect(() => () => { if (timerRef.current) clearInterval(timerRef.current); }, []);
 
-  function dispPhone() {
-    const d = digits.slice(0,12);
-    if (d.length<=3) return '+'+d;
-    if (d.length<=5) return `+${d.slice(0,3)} ${d.slice(3)}`;
-    if (d.length<=8) return `+${d.slice(0,3)} ${d.slice(3,5)} ${d.slice(5)}`;
-    if (d.length<=10) return `+${d.slice(0,3)} ${d.slice(3,5)} ${d.slice(5,8)} ${d.slice(8)}`;
-    return `+${d.slice(0,3)} ${d.slice(3,5)} ${d.slice(5,8)} ${d.slice(8,10)} ${d.slice(10,12)}`;
+  // Telefon formatlash: 901234567 → 90 123 45 67
+  function formatDisplay(raw: string) {
+    const d = raw.slice(0, 9);
+    if (d.length <= 2) return d;
+    if (d.length <= 5) return `${d.slice(0,2)} ${d.slice(2)}`;
+    if (d.length <= 7) return `${d.slice(0,2)} ${d.slice(2,5)} ${d.slice(5)}`;
+    return `${d.slice(0,2)} ${d.slice(2,5)} ${d.slice(5,7)} ${d.slice(7)}`;
   }
+
+  const digits    = phone.replace(/\D/g, '');
+  const fullPhone = `+998${digits}`;
+  const isOk      = digits.length === 9;
 
   function startTimer() {
     setCountdown(180);
-    const tm = setInterval(() => setCountdown(c => { if(c<=1){clearInterval(tm);return 0;} return c-1; }), 1000);
+    if (timerRef.current) clearInterval(timerRef.current);
+    timerRef.current = setInterval(() => {
+      setCountdown(c => {
+        if (c <= 1) { clearInterval(timerRef.current); return 0; }
+        return c - 1;
+      });
+    }, 1000);
   }
 
+  // ✅ TO'G'RILANDI: Eskiz orqali OTP yuborish
   async function sendOTP() {
-    if (digits.length < 12) { Alert.alert(t('error'), t('enterPhone')); return; }
+    if (!isOk) return;
     setLoading(true);
     try {
-
+      await api.sendOTP(fullPhone);           // ← Eskiz SMS
       setStep('otp');
       startTimer();
-    } catch(e:any) {
-      Alert.alert(t('error'), e.message);
-    } finally { setLoading(false); }
+      setTimeout(() => otpRefs.current[0]?.focus(), 300);
+    } catch (e: any) {
+      Alert.alert('Xatolik', e.message);
+    } finally {
+      setLoading(false);
+    }
   }
 
-  function handleOTP(v: string, i: number) {
-    const n = [...otp]; n[i] = v.slice(-1); setOtp(n);
-    if (v && i<5) refs.current[i+1]?.focus();
-    if (n.join('').length === 6) setTimeout(() => verifyOTP(n.join('')), 200);
+  function handleOtpChange(val: string, idx: number) {
+    const c = val.replace(/\D/g, '').slice(-1);
+    const n = [...otp]; n[idx] = c; setOtp(n);
+    if (c && idx < 5) otpRefs.current[idx + 1]?.focus();
+    if (n.join('').length === 6) setTimeout(() => verifyOTP(n.join('')), 100);
   }
 
+  function handleOtpBack(idx: number) {
+    if (!otp[idx] && idx > 0) {
+      const n = [...otp]; n[idx-1] = ''; setOtp(n);
+      otpRefs.current[idx-1]?.focus();
+    }
+  }
+
+  // ✅ TO'G'RILANDI: res o'zgaruvchisi to'g'ri aniqlandi
   async function verifyOTP(code: string) {
     setLoading(true);
     try {
+      const res = await api.verifyOTP(fullPhone, code, name || 'Foydalanuvchi');
 
-      if (res.isNewUser && !name) {
+      if (!res.hasPin && !name.trim()) {
         setLoading(false);
         setStep('name');
         return;
       }
 
       await login(res.token, res.user, res.hasPin);
-      if (res.hasPin) router.replace('/(auth)/pin-lock');
-      else router.replace('/(auth)/create-pin');
-    } catch(e:any) {
-      Alert.alert(t('error'), e.message);
+      router.replace(res.hasPin ? '/(auth)/pin-lock' : '/(auth)/create-pin');
+    } catch (e: any) {
+      Alert.alert('Xatolik', e.message);
       setOtp(['','','','','','']);
-      refs.current[0]?.focus();
-    } finally { setLoading(false); }
+      otpRefs.current[0]?.focus();
+    } finally {
+      setLoading(false);
+    }
   }
 
+  // ✅ TO'G'RILANDI: res o'zgaruvchisi to'g'ri aniqlandi
   async function submitName() {
     if (!name.trim()) return;
     setLoading(true);
     try {
-
+      const res = await api.verifyOTP(fullPhone, otp.join(''), name.trim());
       await login(res.token, res.user, res.hasPin);
       router.replace('/(auth)/create-pin');
-    } catch(e:any) {
-      Alert.alert(t('error'), e.message);
-    } finally { setLoading(false); }
+    } catch (e: any) {
+      Alert.alert('Xatolik', e.message);
+    } finally {
+      setLoading(false);
+    }
   }
 
+  const fmtTimer = `${Math.floor(countdown/60)}:${String(countdown%60).padStart(2,'0')}`;
+
   return (
-    <SafeAreaView style={ls.root}>
-      <KeyboardAvoidingView behavior={Platform.OS==='ios'?'padding':'height'} style={{flex:1}}>
-        {/* Til tanlash */}
-        <View style={ls.langRow}>
-          <TouchableOpacity style={[ls.langBtn, lang==='uz'&&ls.langActive]} onPress={()=>changeLang('uz')}>
-            <Text style={[ls.langTxt, lang==='uz'&&ls.langActiveTxt]}>🇺🇿 UZ</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[ls.langBtn, lang==='ru'&&ls.langActive]} onPress={()=>changeLang('ru')}>
-            <Text style={[ls.langTxt, lang==='ru'&&ls.langActiveTxt]}>🇷🇺 RU</Text>
-          </TouchableOpacity>
+    <SafeAreaView style={s.root}>
+      <KeyboardAvoidingView behavior={Platform.OS==='ios'?'padding':'height'} style={s.kav}>
+
+        {/* Til */}
+        <View style={s.langRow}>
+          {(['uz','ru'] as const).map(l => (
+            <TouchableOpacity
+              key={l}
+              style={[s.langBtn, lang===l && s.langOn]}
+              onPress={() => changeLang(l)}
+            >
+              <Text style={[s.langTxt, lang===l && s.langOnTxt]}>
+                {l === 'uz' ? '🇺🇿 UZ' : '🇷🇺 RU'}
+              </Text>
+            </TouchableOpacity>
+          ))}
         </View>
 
-        <View style={ls.inner}>
-          <Logo />
+        <View style={s.body}>
 
-          {/* Telefon */}
-          {step==='phone' && (
-            <View style={ls.form}>
-              <Text style={ls.h1}>{t('enterPhone')}</Text>
-              <View style={ls.phoneBox}>
-                <Text style={{fontSize:22}}>🇺🇿</Text>
+          {/* Logo */}
+          <View style={s.logo}>
+            <LinearGradient
+              colors={['#7B2FBE','#C44AFF','#FF6B00']}
+              start={{x:0,y:0}} end={{x:1,y:1}}
+              style={s.logoBox}
+            >
+              <Text style={s.logoP}>P</Text>
+            </LinearGradient>
+            <View style={{flexDirection:'row', gap:4, alignItems:'baseline'}}>
+              <Text style={s.logoOson}>Oson</Text>
+              <Text style={s.logoPay}>Pay</Text>
+            </View>
+            <Text style={s.logoTag}>TEZ  •  OSON  •  ISHONCHLI</Text>
+          </View>
+
+          {/* TELEFON */}
+          {step === 'phone' && (
+            <View style={s.card}>
+              <Text style={s.cardH}>{t('enterPhone')}</Text>
+
+              <View style={s.phoneRow}>
+                <View style={s.prefix}>
+                  <Text style={{fontSize:15}}>🇺🇿</Text>
+                  <Text style={s.prefixTxt}>+998</Text>
+                </View>
                 <TextInput
-                  style={ls.phoneField}
-                  value={dispPhone()}
-                  onChangeText={t=>setPhone(t.replace(/\D/g,''))}
+                  style={s.phoneIn}
+                  value={formatDisplay(digits)}
+                  onChangeText={v => setPhone(v.replace(/\D/g,'').slice(0,9))}
                   keyboardType="phone-pad"
-                  placeholder="+998"
-                  placeholderTextColor={C.t3}
-                  maxLength={17}
+                  placeholder="90 000 00 00"
+                  placeholderTextColor={C.t4}
+                  autoFocus
+                  maxLength={11}
                 />
               </View>
+
+              <View style={s.badge}>
+                <Text style={s.badgeTxt}>🔒  Eskiz.uz orqali xavfsiz SMS tasdiqlash</Text>
+              </View>
+
               <TouchableOpacity
                 onPress={sendOTP}
-                disabled={loading||digits.length<12}
-                style={[ls.btnWrap, digits.length<12&&{opacity:0.4}]}
+                disabled={loading || !isOk}
+                style={[s.btn, !isOk && {opacity:0.35}]}
+                activeOpacity={0.85}
               >
-                <LinearGradient colors={C.gBrand} start={{x:0,y:0}} end={{x:1,y:0}} style={ls.btn}>
-                  {loading ? <ActivityIndicator color="#FFF"/> : <Text style={ls.btnTxt}>{t('continue')} →</Text>}
+                <LinearGradient colors={C.gBrand} start={{x:0,y:0}} end={{x:1,y:0}} style={s.btnGrad}>
+                  {loading
+                    ? <ActivityIndicator color="#FFF" size="small"/>
+                    : <Text style={s.btnTxt}>{t('continue')} →</Text>
+                  }
                 </LinearGradient>
               </TouchableOpacity>
             </View>
           )}
 
           {/* OTP */}
-          {step==='otp' && (
-            <View style={ls.form}>
-              <Text style={ls.h1}>{t('enterCode')}</Text>
-              <Text style={ls.sub}>
-                <Text style={{color:C.orange}}>{dispPhone()}</Text> {t('codeSent')}
+          {step === 'otp' && (
+            <View style={s.card}>
+              <Text style={s.cardH}>{t('enterCode')}</Text>
+              <Text style={s.cardSub}>
+                <Text style={{color:C.orange, fontWeight:'700'}}>
+                  +998 {formatDisplay(digits)}
+                </Text>
+                {'  '}ga 6 xonali kod yuborildi
               </Text>
-              <View style={ls.otpRow}>
-                {otp.map((d,i)=>(
+
+              <View style={s.otpRow}>
+                {otp.map((d,i) => (
                   <TextInput
                     key={i}
-                    ref={r=>{refs.current[i]=r;}}
-                    style={[ls.otpBox, d&&ls.otpActive]}
+                    ref={r => { otpRefs.current[i] = r; }}
+                    style={[s.otpCell, d && s.otpCellOn]}
                     value={d}
-                    onChangeText={v=>handleOTP(v,i)}
-                    onKeyPress={({nativeEvent})=>{
-                      if(nativeEvent.key==='Backspace'&&!otp[i]&&i>0){
-                        const n=[...otp];n[i-1]='';setOtp(n);refs.current[i-1]?.focus();
-                      }
+                    onChangeText={v => handleOtpChange(v, i)}
+                    onKeyPress={({nativeEvent}) => {
+                      if (nativeEvent.key === 'Backspace') handleOtpBack(i);
                     }}
-                    keyboardType="numeric" maxLength={1} textAlign="center"
+                    keyboardType="numeric"
+                    maxLength={1}
+                    textAlign="center"
+                    selectTextOnFocus
                   />
                 ))}
               </View>
-              {loading && <ActivityIndicator color={C.primary}/>}
-              <View style={ls.otpFoot}>
-                <TouchableOpacity onPress={()=>{setStep('phone');setOtp(['','','','','','']);}}>
-                  <Text style={{color:C.t3,fontSize:13}}>{t('changePhone')}</Text>
+
+              {loading && (
+                <View style={s.loadRow}>
+                  <ActivityIndicator color={C.primary} size="small"/>
+                  <Text style={s.loadTxt}>Tekshirilmoqda...</Text>
+                </View>
+              )}
+
+              <View style={s.otpFoot}>
+                <TouchableOpacity onPress={() => { setStep('phone'); setOtp(['','','','','','']); }}>
+                  <Text style={s.linkTxt}>← Raqamni o'zgartirish</Text>
                 </TouchableOpacity>
-                {countdown>0
-                  ? <Text style={{color:C.t2,fontSize:13}}>{Math.floor(countdown/60)}:{String(countdown%60).padStart(2,'0')}</Text>
-                  : <TouchableOpacity onPress={sendOTP}><Text style={{color:C.orange,fontSize:13,fontWeight:'600'}}>{t('resend')}</Text></TouchableOpacity>
+                {countdown > 0
+                  ? <Text style={s.timerTxt}>{fmtTimer}</Text>
+                  : (
+                    <TouchableOpacity onPress={sendOTP} disabled={loading}>
+                      <Text style={[s.linkTxt, {color:C.orange}]}>Qayta yuborish</Text>
+                    </TouchableOpacity>
+                  )
                 }
               </View>
             </View>
           )}
 
-          {/* Ism */}
-          {step==='name' && (
-            <View style={ls.form}>
-              <Text style={ls.h1}>{t('enterName')}</Text>
-              <Text style={ls.sub}>Birinchi marta kiryapsiz</Text>
+          {/* ISM */}
+          {step === 'name' && (
+            <View style={s.card}>
+              <Text style={s.cardH}>{t('enterName')}</Text>
+              <Text style={s.cardSub}>Birinchi marta ro'yxatdan o'tyapsiz</Text>
+
               <TextInput
-                style={ls.nameInput}
+                style={s.nameIn}
                 value={name}
                 onChangeText={setName}
                 placeholder={t('namePlaceholder')}
-                placeholderTextColor={C.t3}
+                placeholderTextColor={C.t4}
                 autoCapitalize="words"
                 autoFocus
+                returnKeyType="done"
+                onSubmitEditing={submitName}
               />
+
               <TouchableOpacity
                 onPress={submitName}
-                disabled={loading||!name.trim()}
-                style={[ls.btnWrap, !name.trim()&&{opacity:0.4}]}
+                disabled={loading || !name.trim()}
+                style={[s.btn, !name.trim() && {opacity:0.35}]}
+                activeOpacity={0.85}
               >
-                <LinearGradient colors={C.gBrand} start={{x:0,y:0}} end={{x:1,y:0}} style={ls.btn}>
-                  {loading ? <ActivityIndicator color="#FFF"/> : <Text style={ls.btnTxt}>{t('start')}</Text>}
+                <LinearGradient colors={C.gBrand} start={{x:0,y:0}} end={{x:1,y:0}} style={s.btnGrad}>
+                  {loading
+                    ? <ActivityIndicator color="#FFF" size="small"/>
+                    : <Text style={s.btnTxt}>{t('start')}</Text>
+                  }
                 </LinearGradient>
               </TouchableOpacity>
             </View>
           )}
+
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
-const ls = StyleSheet.create({
-  root: {flex:1, backgroundColor:C.bg},
-  langRow: {flexDirection:'row', justifyContent:'flex-end', padding:S.md, gap:S.sm},
-  langBtn: {paddingHorizontal:14, paddingVertical:6, borderRadius:R.full, backgroundColor:C.elevated, borderWidth:1, borderColor:C.border},
-  langActive: {backgroundColor:C.primaryBg, borderColor:C.primary},
-  langTxt: {color:C.t2, fontSize:13, fontWeight:'600'},
-  langActiveTxt: {color:C.primaryLight},
-  inner: {flex:1, paddingHorizontal:S.lg, justifyContent:'center', gap:28},
-  logoWrap: {alignItems:'center', gap:S.sm},
-  logoCircle: {width:100, height:100, borderRadius:50, overflow:'hidden'},
-  logoGrad: {width:100, height:100, alignItems:'center', justifyContent:'center'},
-  logoP: {fontSize:52, fontWeight:'900', color:'#FFB347'},
-  titleRow: {flexDirection:'row', gap:5},
-  titleOson: {fontSize:32, fontWeight:'900', color:'#FFF'},
-  titlePay: {fontSize:32, fontWeight:'900', color:C.orange},
-  tagline: {fontSize:13, color:C.t3, letterSpacing:0.5},
-  form: {gap:14},
-  h1: {fontSize:22, fontWeight:'800', color:C.t1},
-  sub: {fontSize:14, color:C.t2, lineHeight:20},
-  phoneBox: {flexDirection:'row', alignItems:'center', gap:10, backgroundColor:C.elevated, borderRadius:R.lg, borderWidth:1.5, borderColor:C.border, paddingHorizontal:S.md, height:58},
-  phoneField: {flex:1, fontSize:18, fontWeight:'600', color:C.t1, letterSpacing:0.5},
-  btnWrap: {borderRadius:R.xl, overflow:'hidden'},
-  btn: {height:58, alignItems:'center', justifyContent:'center'},
-  btnTxt: {fontSize:17, fontWeight:'800', color:'#FFF'},
-  otpRow: {flexDirection:'row', gap:8},
-  otpBox: {flex:1, height:62, borderRadius:R.md, backgroundColor:C.elevated, borderWidth:1.5, borderColor:C.border, fontSize:28, fontWeight:'900', color:C.t1},
-  otpActive: {borderColor:C.primary, backgroundColor:C.primaryBg},
-  otpFoot: {flexDirection:'row', justifyContent:'space-between', alignItems:'center'},
-  nameInput: {backgroundColor:C.elevated, borderRadius:R.lg, borderWidth:1.5, borderColor:C.border, paddingHorizontal:S.md, height:58, fontSize:18, color:C.t1},
+const s = StyleSheet.create({
+  root: { flex:1, backgroundColor:C.bg },
+  kav:  { flex:1 },
+
+  langRow: { flexDirection:'row', justifyContent:'flex-end', paddingHorizontal:S.lg, paddingTop:S.sm, gap:S.sm },
+  langBtn: { paddingHorizontal:12, paddingVertical:5, borderRadius:R.full, backgroundColor:C.elevated, borderWidth:1, borderColor:C.border },
+  langOn:  { backgroundColor:C.primaryBg, borderColor:C.primary },
+  langTxt: { fontSize:12, color:C.t3, fontWeight:'600' },
+  langOnTxt: { color:C.primaryLight },
+
+  body: { flex:1, paddingHorizontal:16, justifyContent:'center', gap:20 },
+
+  logo:     { alignItems:'center', gap:6 },
+  logoBox:  { width:60, height:60, borderRadius:16, alignItems:'center', justifyContent:'center' },
+  logoP:    { fontSize:30, fontWeight:'900', color:'#FFD580' },
+  logoOson: { fontSize:22, fontWeight:'900', color:C.t1 },
+  logoPay:  { fontSize:22, fontWeight:'900', color:C.orange },
+  logoTag:  { fontSize:9, color:C.t4, letterSpacing:2, marginTop:2 },
+
+  card:    { backgroundColor:C.surface, borderRadius:18, borderWidth:1, borderColor:C.border, padding:18, gap:12 },
+  cardH:   { fontSize:16, fontWeight:'800', color:C.t1 },
+  cardSub: { fontSize:12, color:C.t2, lineHeight:17 },
+
+  phoneRow: { flexDirection:'row', alignItems:'center', backgroundColor:C.elevated, borderRadius:R.md, borderWidth:1, borderColor:C.border, height:50, overflow:'hidden' },
+  prefix:   { flexDirection:'row', alignItems:'center', gap:5, paddingHorizontal:12, borderRightWidth:1, borderRightColor:C.border, height:'100%' },
+  prefixTxt:{ fontSize:14, fontWeight:'700', color:C.t2 },
+  phoneIn:  { flex:1, paddingHorizontal:12, fontSize:16, fontWeight:'600', color:C.t1, letterSpacing:0.5 },
+
+  badge:    { backgroundColor:'rgba(0,200,150,0.07)', borderRadius:8, paddingHorizontal:12, paddingVertical:8, borderWidth:1, borderColor:'rgba(0,200,150,0.18)' },
+  badgeTxt: { fontSize:11, color:C.success, textAlign:'center' },
+
+  btn:     { borderRadius:R.md, overflow:'hidden' },
+  btnGrad: { height:50, alignItems:'center', justifyContent:'center' },
+  btnTxt:  { fontSize:15, fontWeight:'800', color:'#FFF' },
+
+  otpRow:    { flexDirection:'row', gap:7 },
+  otpCell:   { flex:1, height:50, borderRadius:R.md, backgroundColor:C.elevated, borderWidth:1.5, borderColor:C.border, fontSize:20, fontWeight:'800', color:C.t1 },
+  otpCellOn: { borderColor:C.primary, backgroundColor:C.primaryBg },
+
+  loadRow: { flexDirection:'row', alignItems:'center', gap:8, justifyContent:'center' },
+  loadTxt: { fontSize:12, color:C.t2 },
+
+  otpFoot:  { flexDirection:'row', justifyContent:'space-between', alignItems:'center' },
+  linkTxt:  { fontSize:12, color:C.t3, fontWeight:'500' },
+  timerTxt: { fontSize:12, color:C.t2, fontWeight:'700' },
+
+  nameIn: { backgroundColor:C.elevated, borderRadius:R.md, borderWidth:1.5, borderColor:C.border, paddingHorizontal:14, height:50, fontSize:15, color:C.t1, fontWeight:'500' },
 });
