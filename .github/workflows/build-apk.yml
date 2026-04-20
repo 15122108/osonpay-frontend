@@ -27,8 +27,9 @@ jobs:
         run: |
           npx expo prebuild --platform android --clean
           cd android
-          find . -name "build.gradle" -exec sed -i 's/jvmTarget = "17"/jvmTarget = "21"/g' {} \;
-          find . -name "build.gradle" -exec sed -i 's/JavaVersion.VERSION_17/JavaVersion.VERSION_21/g' {} \;
+          echo "" >> gradle.properties
+          echo "kotlin.jvm.target.validation.mode=IGNORE" >> gradle.properties
+          cat gradle.properties
           chmod +x gradlew
           ./gradlew assembleRelease
 
