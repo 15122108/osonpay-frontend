@@ -21,11 +21,9 @@ jobs:
           java-version: 21
 
       - name: Install dependencies
-        working-directory: frontend
         run: npm install --legacy-peer-deps
 
       - name: Build APK
-        working-directory: frontend
         run: |
           npx expo prebuild --platform android --clean
           cd android
@@ -36,4 +34,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: osonpay-release
-          path: frontend/android/app/build/outputs/apk/release/app-release.apk
+          path: android/app/build/outputs/apk/release/app-release.apk
