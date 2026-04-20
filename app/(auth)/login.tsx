@@ -177,7 +177,7 @@ export default function Login() {
                   placeholder="90 000 00 00"
                   placeholderTextColor={C.t4}
                   autoFocus
-                  maxLength={9}
+                  maxLength={12}
                 />
               </View>
 
