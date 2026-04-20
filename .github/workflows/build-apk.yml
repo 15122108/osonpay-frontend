@@ -27,8 +27,8 @@ jobs:
         run: |
           npx expo prebuild --platform android --clean
           cd android
-          sed -i 's/JavaVersion.VERSION_17/JavaVersion.VERSION_21/g' app/build.gradle
-          sed -i 's/jvmTarget = "17"/jvmTarget = "21"/g' app/build.gradle
+          find . -name "build.gradle" -exec sed -i 's/jvmTarget = "17"/jvmTarget = "21"/g' {} \;
+          find . -name "build.gradle" -exec sed -i 's/JavaVersion.VERSION_17/JavaVersion.VERSION_21/g' {} \;
           chmod +x gradlew
           ./gradlew assembleRelease
 
