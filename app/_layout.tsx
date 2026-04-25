@@ -5,6 +5,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { StyleSheet, AppState } from 'react-native';
 import { AuthProvider, useAuth } from '../hooks/useAuth';
+import { LangProvider } from '../hooks/useLang';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -13,18 +14,30 @@ function Nav() {
   const appState = useRef(AppState.currentState);
 
   useEffect(() => {
+    const sub = AppState.addEventListener('change', nextState => {
+      if (
+        appState.current.match(/inactive|background/) &&
+        nextState === 'active' &&
+        isLoggedIn &&
+        user?.hasPin
+      ) {
+        router.replace('/(auth)/pin-lock');
+      }
+      appState.current = nextState;
+    });
+    return () => sub.remove();
+  }, [isLoggedIn, user?.hasPin]);
+
+  useEffect(() => {
     if (loading) return;
     SplashScreen.hideAsync();
 
     if (!isLoggedIn) {
-      // Token yo'q — loginga
       router.replace('/(auth)/login');
     } else if (!user?.hasPin) {
-      // Login bo'lgan lekin PIN yo'q — PIN yaratishga
       router.replace('/(auth)/create-pin');
     } else {
-      // Login bo'lgan, PIN bor — to'g'ridan tabsga
-      router.replace('/(tabs)');
+      router.replace('/(auth)/pin-lock');
     }
   }, [loading, isLoggedIn, user?.hasPin]);
 
@@ -32,11 +45,11 @@ function Nav() {
     <Stack screenOptions={{
       headerShown: false,
       contentStyle: { backgroundColor: '#0D0A14' },
-      animation: 'slide_from_right'
+      animation: 'slide_from_right',
     }}>
       <Stack.Screen name="(auth)/login" />
       <Stack.Screen name="(auth)/create-pin" />
-      <Stack.Screen name="(auth)/pin-lock" />
+      <Stack.Screen name="(auth)/pin-lock" options={{ gestureEnabled: false }} />
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="modals/send"        options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
       <Stack.Screen name="modals/receive"     options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
@@ -51,10 +64,12 @@ function Nav() {
 export default function Root() {
   return (
     <AuthProvider>
-      <GestureHandlerRootView style={s.root}>
-        <StatusBar style="light" backgroundColor="#0D0A14" />
-        <Nav />
-      </GestureHandlerRootView>
+      <LangProvider>
+        <GestureHandlerRootView style={s.root}>
+          <StatusBar style="light" backgroundColor="#0D0A14" />
+          <Nav />
+        </GestureHandlerRootView>
+      </LangProvider>
     </AuthProvider>
   );
 }

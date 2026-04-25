@@ -1,32 +1,77 @@
-import { Tabs } from 'expo-router';
-import { View, Text, StyleSheet, Platform } from 'react-native';
-import { C } from '../../constants/theme';
-import { useLang } from '../../hooks/useLang';
+import { useEffect, useRef } from 'react';
+import { Stack, router } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
+import * as SplashScreen from 'expo-splash-screen';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { StyleSheet, AppState } from 'react-native';
+import { AuthProvider, useAuth } from '../hooks/useAuth';
+import { LangProvider } from '../hooks/useLang';
 
-function Icon({ emoji, focused }: { emoji: string; focused: boolean }) {
+SplashScreen.preventAutoHideAsync();
+
+function Nav() {
+  const { loading, isLoggedIn, user } = useAuth();
+  const appState = useRef(AppState.currentState);
+
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', nextState => {
+      if (
+        appState.current.match(/inactive|background/) &&
+        nextState === 'active' &&
+        isLoggedIn &&
+        user?.hasPin
+      ) {
+        router.replace('/(auth)/pin-lock');
+      }
+      appState.current = nextState;
+    });
+    return () => sub.remove();
+  }, [isLoggedIn, user?.hasPin]);
+
+  useEffect(() => {
+    if (loading) return;
+    SplashScreen.hideAsync();
+
+    if (!isLoggedIn) {
+      router.replace('/(auth)/login');
+    } else if (!user?.hasPin) {
+      router.replace('/(auth)/create-pin');
+    } else {
+      router.replace('/(auth)/pin-lock');
+    }
+  }, [loading, isLoggedIn, user?.hasPin]);
+
   return (
-    <View style={s.icon}>
-      <Text style={[s.emoji, { opacity: focused ? 1 : 0.4 }]}>{emoji}</Text>
-      {focused && <View style={s.dot} />}
-    </View>
+    <Stack screenOptions={{
+      headerShown: false,
+      contentStyle: { backgroundColor: '#0D0A14' },
+      animation: 'slide_from_right',
+    }}>
+      <Stack.Screen name="(auth)/login" />
+      <Stack.Screen name="(auth)/create-pin" />
+      <Stack.Screen name="(auth)/pin-lock" options={{ gestureEnabled: false }} />
+      <Stack.Screen name="(tabs)" />
+      <Stack.Screen name="modals/send"        options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
+      <Stack.Screen name="modals/receive"     options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
+      <Stack.Screen name="modals/topup"       options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
+      <Stack.Screen name="modals/transaction" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
+      <Stack.Screen name="modals/addcard"     options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
+      <Stack.Screen name="modals/kyc"         options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
+    </Stack>
   );
 }
 
-export default function TabLayout() {
-  const { t } = useLang();
+export default function Root() {
   return (
-    <Tabs screenOptions={{ headerShown: false, tabBarStyle: s.bar, tabBarShowLabel: false, tabBarActiveTintColor: C.primary, tabBarInactiveTintColor: C.t3 }}>
-      <Tabs.Screen name="index" options={{ tabBarIcon: ({ focused }) => <Icon emoji="🏠" focused={focused} /> }} />
-      <Tabs.Screen name="cards" options={{ tabBarIcon: ({ focused }) => <Icon emoji="💳" focused={focused} /> }} />
-      <Tabs.Screen name="history" options={{ tabBarIcon: ({ focused }) => <Icon emoji="📋" focused={focused} /> }} />
-      <Tabs.Screen name="profile" options={{ tabBarIcon: ({ focused }) => <Icon emoji="👤" focused={focused} /> }} />
-    </Tabs>
+    <AuthProvider>
+      <LangProvider>
+        <GestureHandlerRootView style={s.root}>
+          <StatusBar style="light" backgroundColor="#0D0A14" />
+          <Nav />
+        </GestureHandlerRootView>
+      </LangProvider>
+    </AuthProvider>
   );
 }
 
-const s = StyleSheet.create({
-  bar: { backgroundColor: C.surface, borderTopWidth: 0.5, borderTopColor: C.border, height: Platform.OS === 'ios' ? 85 : 65, paddingTop: 8 },
-  icon: { alignItems: 'center', gap: 3 },
-  emoji: { fontSize: 24 },
-  dot: { width: 4, height: 4, borderRadius: 2, backgroundColor: C.primary },
-});
+const s = StyleSheet.create({ root: { flex: 1 } });
