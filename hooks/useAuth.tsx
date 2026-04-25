@@ -8,6 +8,8 @@ interface User {
   balance: number;
   language: string;
   hasPin: boolean;
+  isVerified?: boolean;
+  currency?: string;
 }
 
 interface AuthCtx {
@@ -18,6 +20,7 @@ interface AuthCtx {
   logout: () => Promise<void>;
   refresh: () => Promise<void>;
   setHasPin: (v: boolean) => void;
+  updateBalance: (balance: number) => void;
 }
 
 const Ctx = createContext<AuthCtx>({} as AuthCtx);
@@ -33,15 +36,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const loggedIn = await Auth.isLoggedIn();
       if (loggedIn) {
         const d = await api.getProfile();
-        // pin_hash backend dan bool sifatida keladi
-        const hasPin = d.user.pin_hash === true || d.user.pin_hash === 1;
         setUser({
-          id:       d.user.id,
-          phone:    d.user.phone,
-          fullName: d.user.full_name || '',
-          balance:  parseFloat(d.user.balance) || 0,
-          language: d.user.language || 'uz',
-          hasPin,
+          id:         d.user.id,
+          phone:      d.user.phone,
+          fullName:   d.user.full_name || '',
+          balance:    parseFloat(d.user.balance) || 0,
+          language:   d.user.language || 'uz',
+          hasPin:     !!d.user.pin_hash,
+          isVerified: d.user.is_verified || false,
+          currency:   'UZS',
         });
       }
     } catch {
@@ -54,18 +57,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   async function login(token: string, userData: any, hasPin = false) {
     await Auth.save(token, userData);
     setUser({
-      id:       userData.id,
-      phone:    userData.phone,
-      fullName: userData.fullName || userData.full_name || '',
-      balance:  0,
-      language: 'uz',
+      id:         userData.id,
+      phone:      userData.phone,
+      fullName:   userData.fullName  userData.full_name  '',
+      balance:    0,
+      language:   'uz',
       hasPin,
+      isVerified: userData.is_verified || false,
+      currency:   'UZS',
     });
   }
 
-  // PIN o'rnatilgandan keyin chaqiriladi — ilovani qayta yuklamasdan holat yangilanadi
   function setHasPin(v: boolean) {
     setUser(u => u ? { ...u, hasPin: v } : u);
+  }
+
+  function updateBalance(balance: number) {
+    setUser(u => u ? { ...u, balance } : u);
   }
 
   async function logout() {
@@ -79,15 +87,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const d = await api.getProfile();
       setUser(u => u ? {
         ...u,
-        fullName: d.user.full_name || u.fullName,
-        balance:  parseFloat(d.user.balance) || 0,
-        hasPin:   d.user.pin_hash === true || d.user.pin_hash === 1,
+        fullName:   d.user.full_name || u.fullName,
+        balance:    parseFloat(d.user.balance) || 0,
+        hasPin:     !!d.user.pin_hash,
+        isVerified: d.user.is_verified || false,
       } : u);
     } catch {}
   }
 
   return (
-    <Ctx.Provider value={{ user, loading, isLoggedIn: !!user, login, logout, refresh, setHasPin }}>
+    <Ctx.Provider value={{
+      user,
+      loading,
+      isLoggedIn: !!user,
+      login,
+      logout,
+      refresh,
+      setHasPin,
+      updateBalance,
+    }}>
       {children}
     </Ctx.Provider>
   );
