@@ -10,28 +10,42 @@ const QUICK = [50000,100000,250000,500000,1000000];
 
 export default function Send() {
   const { t } = useLang();
-  const [step, setStep] = useState<'phone'|'amount'|'confirm'>('phone');
+  const [mode, setMode] = useState<'phone'|'card'>('phone');
+  const [step, setStep] = useState<'input'|'amount'|'confirm'>('input');
   const [phone, setPhone] = useState('998');
+  const [cardNumber, setCardNumber] = useState('');
+  const [fromCardId, setFromCardId] = useState('');
   const [amount, setAmount] = useState('');
   const [note, setNote] = useState('');
   const [loading, setLoading] = useState(false);
 
   const digits = phone.replace(/\D/g,'');
-  const e164 = `+${digits.startsWith('998')?digits:'998'+digits}`;
+  const e164 = +${digits.startsWith('998')?digits:'998'+digits};
+
   function dispPhone() {
     const d=digits.slice(0,12);
     if(d.length<=3)return '+'+d;
-    if(d.length<=5)return `+${d.slice(0,3)} ${d.slice(3)}`;
-    if(d.length<=8)return `+${d.slice(0,3)} ${d.slice(3,5)} ${d.slice(5)}`;
-    if(d.length<=10)return `+${d.slice(0,3)} ${d.slice(3,5)} ${d.slice(5,8)} ${d.slice(8)}`;
-    return `+${d.slice(0,3)} ${d.slice(3,5)} ${d.slice(5,8)} ${d.slice(8,10)} ${d.slice(10,12)}`;
+    if(d.length<=5)return +${d.slice(0,3)} ${d.slice(3)};
+    if(d.length<=8)return +${d.slice(0,3)} ${d.slice(3,5)} ${d.slice(5)};
+    if(d.length<=10)return +${d.slice(0,3)} ${d.slice(3,5)} ${d.slice(5,8)} ${d.slice(8)};
+    return +${d.slice(0,3)} ${d.slice(3,5)} ${d.slice(5,8)} ${d.slice(8,10)} ${d.slice(10,12)};
+  }
+
+  function formatCardNumber(val: string) {
+    const clean = val.replace(/\D/g,'').slice(0,16);
+    return clean.replace(/(.{4})/g,'$1 ').trim();
   }
 
   async function send() {
     setLoading(true);
     try {
-      await api.sendMoney(e164, Number(amount), note||undefined);
-      Alert.alert('✅', `${formatMoney(Number(amount))} UZS yuborildi!`, [{text:t('ok'),onPress:()=>router.back()}]);
+      if (mode === 'phone') {
+        await api.sendMoney(e164, Number(amount), note||undefined);
+        Alert.alert('✅', ${formatMoney(Number(amount))} UZS yuborildi!, [{text:t('ok'),onPress:()=>router.back()}]);
+      } else {
+        await api.cardTransfer(fromCardId, cardNumber.replace(/\s/g,''), Number(amount));
+        Alert.alert('✅', ${formatMoney(Number(amount))} UZS karta orqali yuborildi!, [{text:t('ok'),onPress:()=>router.back()}]);
+      }
     } catch(e:any) { Alert.alert(t('error'),e.message); }
     finally { setLoading(false); }
   }
@@ -40,24 +54,38 @@ export default function Send() {
     <SafeAreaView style={s.root}>
       <KeyboardAvoidingView behavior={Platform.OS==='ios'?'padding':'height'} style={{flex:1}}>
         <View style={s.header}>
-          <TouchableOpacity onPress={()=>step==='phone'?router.back():setStep(step==='confirm'?'amount':'phone')}>
-            <Text style={s.headerBtn}>{step==='phone'?'✕':'←'}</Text>
+          <TouchableOpacity onPress={()=>step==='input'?router.back():setStep(step==='confirm'?'amount':'input')}>
+            <Text style={s.headerBtn}>{step==='input'?'✕':'←'}</Text>
           </TouchableOpacity>
-          <Text style={s.headerTitle}>{step==='phone'?t('sendTo'):step==='amount'?t('amount'):t('confirm')}</Text>
+          <Text style={s.headerTitle}>{t('sendTo')}</Text>
           <View style={{width:36}}/>
         </View>
+
+        {/* Mode toggle */}
+        <View style={s.modeRow}>
+          <TouchableOpacity style={[s.modeBtn, mode==='phone'&&s.modeBtnOn]} onPress={()=>{setMode('phone');setStep('input');}}>
+            <Text style={[s.modeTxt, mode==='phone'&&s.modeTxtOn]}>📱 Telefon</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[s.modeBtn, mode==='card'&&s.modeBtnOn]} onPress={()=>{setMode('card');setStep('input');}}>
+            <Text style={[s.modeTxt, mode==='card'&&s.modeTxtOn]}>💳 Karta</Text>
+          </TouchableOpacity>
+        </View>
+
         <View style={s.progress}>
-          {['phone','amount','confirm'].map((p,i)=>(
-            <View key={p} style={[s.progDot,['phone','amount','confirm'].indexOf(step)>=i&&s.progDotOn]}/>
+          {['input','amount','confirm'].map((p,i)=>(
+            <View key={p} style={[s.progDot,['input','amount','confirm'].indexOf(step)>=i&&s.progDotOn]}/>
           ))}
         </View>
+
         <ScrollView contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
-          {step==='phone'&&(
+          {/* PHONE MODE */}
+          {mode==='phone' && step==='input' && (
             <View style={s.form}>
               <Text style={s.label}>{t('sendTo')}</Text>
               <View style={s.phoneBox}>
                 <Text style={{fontSize:20}}>🇺🇿</Text>
-                <TextInput style={s.phoneInput} value={dispPhone()} onChangeText={t=>setPhone(t.replace(/\D/g,''))} keyboardType="phone-pad" placeholder="+998 90 123 45 67" placeholderTextColor={C.t3} autoFocus/>
+                <TextInput style={s.phoneInput} value={dispPhone()} onChangeText={t=>setPhone(t.
+                  replace(/\D/g,''))} keyboardType="phone-pad" placeholder="+998 90 123 45 67" placeholderTextColor={C.t3} autoFocus/>
               </View>
               <TouchableOpacity onPress={()=>setStep('amount')} disabled={digits.length<12} style={[s.btnWrap,digits.length<12&&{opacity:0.4}]}>
                 <LinearGradient colors={C.gBrand} start={{x:0,y:0}} end={{x:1,y:0}} style={s.btn}>
@@ -66,11 +94,38 @@ export default function Send() {
               </TouchableOpacity>
             </View>
           )}
-          {step==='amount'&&(
+
+          {/* CARD MODE */}
+          {mode==='card' && step==='input' && (
+            <View style={s.form}>
+              <Text style={s.label}>Qabul qiluvchi karta raqami</Text>
+              <View style={s.phoneBox}>
+                <Text style={{fontSize:20}}>💳</Text>
+                <TextInput
+                  style={s.phoneInput}
+                  value={formatCardNumber(cardNumber)}
+                  onChangeText={v=>setCardNumber(v.replace(/\D/g,''))}
+                  keyboardType="numeric"
+                  placeholder="0000 0000 0000 0000"
+                  placeholderTextColor={C.t3}
+                  autoFocus
+                  maxLength={19}
+                />
+              </View>
+              <TouchableOpacity onPress={()=>setStep('amount')} disabled={cardNumber.replace(/\D/g,'').length<16} style={[s.btnWrap,cardNumber.replace(/\D/g,'').length<16&&{opacity:0.4}]}>
+                <LinearGradient colors={C.gBrand} start={{x:0,y:0}} end={{x:1,y:0}} style={s.btn}>
+                  <Text style={s.btnTxt}>{t('continue')} →</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {/* AMOUNT STEP */}
+          {step==='amount' && (
             <View style={s.form}>
               <View style={s.recipientRow}>
-                <Text style={{fontSize:20}}>📱</Text>
-                <Text style={s.recipientPhone}>{dispPhone()}</Text>
+                <Text style={{fontSize:20}}>{mode==='phone'?'📱':'💳'}</Text>
+                <Text style={s.recipientPhone}>{mode==='phone'?dispPhone():formatCardNumber(cardNumber)}</Text>
               </View>
               <Text style={s.label}>{t('amount')}</Text>
               <View style={s.amtBox}>
@@ -84,8 +139,12 @@ export default function Send() {
                   </TouchableOpacity>
                 ))}
               </View>
-              <Text style={s.label}>{t('note')}</Text>
-              <TextInput style={s.noteInput} value={note} onChangeText={setNote} placeholder={t('note')} placeholderTextColor={C.t3}/>
+              {mode==='phone' && (
+                <>
+                  <Text style={s.label}>{t('note')}</Text>
+                  <TextInput style={s.noteInput} value={note} onChangeText={setNote} placeholder={t('note')} placeholderTextColor={C.t3}/>
+                </>
+              )}
               <TouchableOpacity onPress={()=>setStep('confirm')} disabled={!amount||Number(amount)<1000} style={[s.btnWrap,(!amount||Number(amount)<1000)&&{opacity:0.4}]}>
                 <LinearGradient colors={C.gBrand} start={{x:0,y:0}} end={{x:1,y:0}} style={s.btn}>
                   <Text style={s.btnTxt}>{t('continue')} →</Text>
@@ -93,16 +152,19 @@ export default function Send() {
               </TouchableOpacity>
             </View>
           )}
-          {step==='confirm'&&(
+
+          {/* CONFIRM STEP */}
+          {step==='confirm' && (
             <View style={s.form}>
               <View style={s.confirmCard}>
                 {[
-                  {label:t('recipient'),value:dispPhone()},
+                  {label:t('recipient'),value:mode==='phone'?dispPhone():formatCardNumber(cardNumber)},
                   {label:t('amount'),value:`${formatMoney(Number(amount))} UZS`,highlight:true},
-                  ...(note?[{label:t('note'),value:note}]:[]),
+                  ...(note&&mode==='phone'?[{label:t('note'),value:note}]:[]),
                   {label:t('fee'),value:t('freeTransfer')},
                 ].map((row,i)=>(
-                  <View key={i} style={s.confRow}>
+                  <View key={i} style={s.
+                      confRow}>
                     <Text style={s.confLabel}>{row.label}</Text>
                     <Text style={[s.confVal,(row as any).highlight&&{color:C.orange,fontSize:18,fontWeight:'800'}]}>{row.value}</Text>
                   </View>
@@ -130,7 +192,12 @@ const s = StyleSheet.create({
   header:{flexDirection:'row',justifyContent:'space-between',alignItems:'center',paddingHorizontal:S.lg,paddingVertical:S.md,borderBottomWidth:0.5,borderBottomColor:C.border},
   headerBtn:{fontSize:22,color:C.t2,width:36,textAlign:'center'},
   headerTitle:{fontSize:17,fontWeight:'700',color:C.t1},
-  progress:{flexDirection:'row',justifyContent:'center',gap:6,paddingVertical:S.md},
+  modeRow:{flexDirection:'row',margin:S.lg,backgroundColor:C.elevated,borderRadius:R.lg,padding:4,gap:4},
+  modeBtn:{flex:1,paddingVertical:10,borderRadius:R.md,alignItems:'center'},
+  modeBtnOn:{backgroundColor:C.primary},
+  modeTxt:{fontSize:14,fontWeight:'600',color:C.t3},
+  modeTxtOn:{color:'#FFF'},
+  progress:{flexDirection:'row',justifyContent:'center',gap:6,paddingVertical:S.sm},
   progDot:{width:8,height:8,borderRadius:4,backgroundColor:C.border},
   progDotOn:{width:24,backgroundColor:C.primary},
   content:{padding:S.lg,paddingBottom:40},

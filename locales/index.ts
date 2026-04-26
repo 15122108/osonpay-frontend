@@ -140,5 +140,5 @@ export const translations = {
   }
 };
 
-export type Lang = 'uz' | 'ru';
+export type Lang = 'uz' | 'ru' | 'en';
 export type TranslationKey = keyof typeof translations.uz;
