@@ -34,7 +34,7 @@ export default function Login() {
     if (d.length <= 2) return d;
    if (d.length <= 5) return '${d.slice(0, 2)} ${d.slice(2)}';
     if (d.length <= 7) return '${d.slice(0, 2)} ${d.slice(2, 5)} ${d.slice(5)}';
-    return ${d.slice(0, 2)} ${d.slice(2, 5)} ${d.slice(5, 7)} ${d.slice(7)};
+    return '${d.slice(0, 2)} ${d.slice(2, 5)} ${d.slice(5, 7)} ${d.slice(7)}';
   }
 
   const digits = phone.replace(/\D/g, '');
