@@ -2,7 +2,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export const BASE_URL = 'https://osonpay-backend-1.onrender.com/api';
 
-// Request timeout — 15 sekund
 async function req(method: string, path: string, body?: any) {
   const token = await AsyncStorage.getItem('token');
 
@@ -28,7 +27,7 @@ async function req(method: string, path: string, body?: any) {
   } catch (e: any) {
     clearTimeout(timeout);
     if (e.name === 'AbortError')
-      throw new Error('Serverga ulanib bo\'lmadi. Qayta urinib ko\'ring');
+      throw new Error('Serverga ulanib bolmadi. Qayta urinib koring');
     if (e.message === 'Network request failed')
       throw new Error('Internet aloqasini tekshiring');
     throw e;
@@ -73,6 +72,11 @@ export const api = {
   addCard:        (data: any)  => req('POST',   '/cards', data),
   setDefaultCard: (id: string) => req('PUT',    /cards/${id}/default, {}),
   deleteCard:     (id: string) => req('DELETE', `/cards/${id}`),
+  cardTransfer:   (fromCardId: string, toCardNumber: string, amount: number) =>
+    req('POST', '/cards/transfer', { from_card_id: fromCardId, to_card_number: toCardNumber, amount }),
+  getQR:          () => req('GET', '/cards/qr'),
+  payByQR:        (qrData: string, amount: number) =>
+    req('POST', '/cards/qr/pay', { qr_data: qrData, amount }),
 
   // Payments
   initTopup:          (amount: number)    => req('POST', '/payments/topup/init', { amount }),

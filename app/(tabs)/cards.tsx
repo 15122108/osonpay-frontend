@@ -1,8 +1,8 @@
-// cards.tsx
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, SafeAreaView, RefreshControl, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, SafeAreaView, RefreshControl, Alert, ActivityIndicator, Modal, TextInput } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
+import QRCode from 'react-native-qrcode-svg';
 import { C, S, R, formatMoney } from '../../constants/theme';
 import { api } from '../../services/api';
 import { useLang } from '../../hooks/useLang';
@@ -12,16 +12,50 @@ export default function Cards() {
   const [cards, setCards] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [qrModal, setQrModal] = useState(false);
+  const [qrData, setQrData] = useState('');
+  const [scanModal, setScanModal] = useState(false);
+  const [scanInput, setScanInput] = useState('');
+  const [scanAmount, setScanAmount] = useState('');
+  const [scanLoading, setScanLoading] = useState(false);
 
   async function load() {
     try { const r = await api.getCards(); setCards(r.cards||[]); } catch {} finally { setLoading(false); }
+  }
+
+  async function showQR() {
+    try {
+      const r = await api.getQR();
+      setQrData(r.qr_data);
+      setQrModal(true);
+    } catch(e: any) { Alert.alert(t('error'), e.message); }
+  }
+
+  async function payByQR() {
+    if (!scanInput  !scanAmount  Number(scanAmount) < 1000) {
+      Alert.alert(t('error'), 'QR ma\'lumot va summa kiriting');
+      return;
+    }
+    setScanLoading(true);
+    try {
+      await api.payByQR(scanInput, Number(scanAmount));
+      Alert.alert('✅', `${formatMoney(Number(scanAmount))} UZS to'landi!`);
+      setScanModal(false);
+      setScanInput('');
+      setScanAmount('');
+    } catch(e: any) { Alert.alert(t('error'), e.message); }
+    finally { setScanLoading(false); }
   }
 
   useEffect(() => { load(); }, []);
 
   return (
     <SafeAreaView style={s.root}>
-      <ScrollView refreshControl={<RefreshControl refreshing={refreshing} onRefresh={async()=>{setRefreshing(true);await load();setRefreshing(false);}} tintColor={C.primary}/>} contentContainerStyle={{paddingBottom:100}} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={async()=>{setRefreshing(true);await load();setRefreshing(false);}} tintColor={C.primary}/>}
+        contentContainerStyle={{paddingBottom:100}}
+        showsVerticalScrollIndicator={false}
+      >
         <View style={s.header}>
           <Text style={s.title}>{t('myCards')}</Text>
           <TouchableOpacity style={s.addBtn} onPress={()=>router.push('/modals/addcard' as any)}>
@@ -30,6 +64,21 @@ export default function Cards() {
             </LinearGradient>
           </TouchableOpacity>
         </View>
+
+        {/* QR tugmalar */}
+        <View style={s.qrRow}>
+          <TouchableOpacity style={s.qrBtn} onPress={showQR}>
+            <LinearGradient colors={C.gBrand} start={{x:0,y:0}} end={{x:1,y:0}} style={s.qrBtnGrad}>
+              <Text style={s.qrBtnTxt}>📲 QR kod</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+          <TouchableOpacity style={s.qrBtn} onPress={()=>setScanModal(true)}>
+            <LinearGradient colors={['#00C896','#0099AA']} start={{x:0,y:0}} end={{x:1,y:0}} style={s.qrBtnGrad}>
+              <Text style={s.qrBtnTxt}>🔍 QR to'lov</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+        </View>
+
         {loading ? <ActivityIndicator color={C.primary} style={{marginTop:40}}/> : cards.length===0 ? (
           <View style={s.empty}>
             <Text style={{fontSize:60,marginBottom:S.md}}>💳</Text>
@@ -43,7 +92,8 @@ export default function Cards() {
           </View>
         ) : (
           <View style={s.list}>
-            {cards.map(card=>(
+            {cards.
+               map(card=>(
               <View key={card.id}>
                 <LinearGradient colors={[card.color_from||'#7B2FBE',card.color_to||'#FF6B00']} start={{x:0,y:0}} end={{x:1,y:1}} style={s.card}>
                   <View style={s.cardTop}>
@@ -51,9 +101,11 @@ export default function Cards() {
                       <Text style={s.cardBalLbl}>Balans</Text>
                       <Text style={s.cardBal}>{formatMoney(card.balance)} UZS</Text>
                     </View>
-                    <View style={s.cardTypeBadge}><Text style={s.cardType}>{(card.card_type||'UZCARD').toUpperCase()}</Text></View>
+                    <View style={s.cardTypeBadge}>
+                      <Text style={s.cardType}>{(card.card_type||'UZCARD').toUpperCase()}</Text>
+                    </View>
                   </View>
-                  <Text style={s.cardNum}>•••• •••• •••• {card.card_number?.slice(-4)}</Text>
+                  <Text style={s.cardNum}>•••• •••• •••• {card.card_number_masked?.slice(-4)}</Text>
                   <View style={s.cardBot}>
                     <Text style={s.cardHolder}>{card.card_holder}</Text>
                     <Text style={s.cardExp}>{card.expiry_month}/{card.expiry_year?.slice(-2)}</Text>
@@ -62,9 +114,11 @@ export default function Cards() {
                   <View style={[s.deco,{width:180,height:180,top:-60,right:-40}]}/>
                 </LinearGradient>
                 <View style={s.cardActions}>
-                  {!card.is_default&&<TouchableOpacity style={s.cardAction} onPress={async()=>{await api.setDefaultCard(card.id);load();}}>
-                    <Text style={s.cardActionTxt}>⭐ Asosiy</Text>
-                  </TouchableOpacity>}
+                  {!card.is_default&&(
+                    <TouchableOpacity style={s.cardAction} onPress={async()=>{await api.setDefaultCard(card.id);load();}}>
+                      <Text style={s.cardActionTxt}>⭐️ Asosiy</Text>
+                    </TouchableOpacity>
+                  )}
                   <TouchableOpacity style={[s.cardAction,s.cardActionDanger]} onPress={()=>Alert.alert("O'chirish","Rostdan ham?", [{text:"Bekor",style:'cancel'},{text:"O'chirish",style:'destructive',onPress:async()=>{await api.deleteCard(card.id);load();}}])}>
                     <Text style={[s.cardActionTxt,{color:C.danger}]}>🗑 O'chirish</Text>
                   </TouchableOpacity>
@@ -74,6 +128,58 @@ export default function Cards() {
           </View>
         )}
       </ScrollView>
+
+      {/* QR Ko'rsatish Modal */}
+      <Modal visible={qrModal} transparent animationType="slide">
+        <View style={s.modalBg}>
+          <View style={s.modalBox}>
+            <Text style={s.modalTitle}>📲 Mening QR kodim</Text>
+            <Text style={s.modalDesc}>Bu QR kodni skanerlang va to'lov qiling</Text>
+            {qrData ? (
+              <View style={s.qrBox}>
+                <QRCode value={qrData} size={220} backgroundColor="white"/>
+              </View>
+            ) : <ActivityIndicator color={C.primary}/>}
+            <TouchableOpacity style={s.modalClose} onPress={()=>setQrModal(false)}>
+              <Text style={s.modalCloseTxt}>Yopish</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* QR To'lov Modal */}
+      <Modal visible={scanModal} transparent animationType="slide">
+        <View style={s.modalBg}>
+          <View style={s.modalBox}>
+            <Text style={s.modalTitle}>🔍 QR orqali to'lov</Text>
+            <Text style={s.modalDesc}>QR kod ma'lumotini kiriting</Text>
+            <TextInput
+              style={s.modalInput}
+              value={scanInput}
+              onChangeText={setScanInput}
+              placeholder="QR kod ma'lumoti"
+              placeholderTextColor={C.t3}
+              multiline
+            />
+            <TextInput
+              style={s.modalInput}
+              value={scanAmount}
+              onChangeText={setScanAmount}
+              placeholder="Summa (UZS)"
+              placeholderTextColor={C.t3}
+              keyboardType="numeric"
+            />
+            <TouchableOpacity style={s.modalBtn} onPress={payByQR} disabled={scanLoading}>
+              <LinearGradient colors={C.gBrand} start={{x:0,y:0}} end={{x:1,y:0}} style={s.modalBtnGrad}>
+                {scanLoading ? <ActivityIndicator color="#FFF"/> : <Text style={s.modalBtnTxt}>✓ To'lash</Text>}
+              </LinearGradient>
+            </TouchableOpacity>
+            <TouchableOpacity style={s.modalClose} onPress={()=>setScanModal(false)}>
+            <Text style={s.modalCloseTxt}>Bekor qilish</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -85,6 +191,10 @@ const s = StyleSheet.create({
   addBtn:{borderRadius:R.full,overflow:'hidden'},
   addBtnGrad:{paddingHorizontal:16,paddingVertical:9},
   addBtnTxt:{color:'#FFF',fontWeight:'700',fontSize:13},
+  qrRow:{flexDirection:'row',paddingHorizontal:S.lg,gap:S.sm,marginBottom:S.md},
+  qrBtn:{flex:1,borderRadius:R.lg,overflow:'hidden'},
+  qrBtnGrad:{paddingVertical:14,alignItems:'center'},
+  qrBtnTxt:{color:'#FFF',fontWeight:'700',fontSize:14},
   list:{paddingHorizontal:S.lg,gap:S.md},
   card:{borderRadius:R.xxl,padding:S.lg,minHeight:190,overflow:'hidden',justifyContent:'space-between',marginBottom:4},
   cardTop:{flexDirection:'row',justifyContent:'space-between'},
@@ -109,4 +219,15 @@ const s = StyleSheet.create({
   emptyBtn:{borderRadius:R.xl,overflow:'hidden'},
   emptyBtnGrad:{paddingHorizontal:S.xl,paddingVertical:14},
   emptyBtnTxt:{color:'#FFF',fontWeight:'800',fontSize:16},
+  modalBg:{flex:1,backgroundColor:'rgba(0,0,0,0.6)',justifyContent:'flex-end'},
+  modalBox:{backgroundColor:C.bg,borderTopLeftRadius:R.xxl,borderTopRightRadius:R.xxl,padding:S.xl,gap:S.md},
+  modalTitle:{fontSize:20,fontWeight:'800',color:C.t1,textAlign:'center'},
+  modalDesc:{fontSize:14,color:C.t3,textAlign:'center'},
+  qrBox:{alignItems:'center',backgroundColor:'#FFF',borderRadius:R.xl,padding:S.lg,alignSelf:'center'},
+  modalInput:{backgroundColor:C.elevated,borderRadius:R.lg,borderWidth:1,borderColor:C.border,paddingHorizontal:S.md,height:50,color:C.t1,fontSize:15},
+  modalBtn:{borderRadius:R.xl,overflow:'hidden'},
+  modalBtnGrad:{height:54,alignItems:'center',justifyContent:'center'},
+  modalBtnTxt:{color:'#FFF',fontWeight:'800',fontSize:16},
+  modalClose:{alignItems:'center',paddingVertical:S.md},
+  modalCloseTxt:{color:C.t3,fontSize:15},
 });
