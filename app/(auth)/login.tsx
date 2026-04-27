@@ -38,8 +38,8 @@ export default function Login() {
   }
 
   const digits = phone.replace(/\D/g, '');
-  const fullPhone = +998${digits};
-  const isOk = digits.length === 9;
+  const fullPhone = '+998${digits}';
+  const isOk = 'digits.length === 9';
 
   function startTimer() {
     setCountdown(180);
