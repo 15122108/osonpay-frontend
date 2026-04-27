@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Stack, router, usePathname } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
@@ -13,6 +13,7 @@ function Nav() {
   const { loading, isLoggedIn, user } = useAuth();
   const appState = useRef(AppState.currentState);
   const pathname = usePathname();
+  const [pinShown, setPinShown] = useState(false);
 
   useEffect(() => {
     const sub = AppState.addEventListener('change', nextState => {
@@ -21,8 +22,9 @@ function Nav() {
         nextState === 'active' &&
         isLoggedIn &&
         user?.hasPin &&
-        pathname !== '/(auth)/pin-lock'
+        !pathname.includes('pin-lock')
       ) {
+        setPinShown(false);
         router.replace('/(auth)/pin-lock');
       }
       appState.current = nextState;
@@ -36,9 +38,16 @@ function Nav() {
 
     if (!isLoggedIn) {
       router.replace('/(auth)/login');
-    } else if (!user?.hasPin) {
+      return;
+    }
+
+    if (!user?.hasPin) {
       router.replace('/(auth)/create-pin');
-    } else {
+      return;
+    }
+
+    if (!pinShown) {
+      setPinShown(true);
       router.replace('/(auth)/pin-lock');
     }
   }, [loading, isLoggedIn, user?.hasPin]);
@@ -53,12 +62,13 @@ function Nav() {
       <Stack.Screen name="(auth)/create-pin" />
       <Stack.Screen name="(auth)/pin-lock" options={{ gestureEnabled: false }} />
       <Stack.Screen name="(tabs)" />
-      <Stack.Screen name="modals/send"        options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
-      <Stack.Screen name="modals/receive"     options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
-      <Stack.Screen name="modals/topup"       options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
+      <Stack.Screen name="modals/send" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
+      <Stack.Screen name="modals/receive" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
+      <Stack.Screen name="modals/topup" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
       <Stack.Screen name="modals/transaction" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
-      <Stack.Screen name="modals/addcard"     options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
-      <Stack.Screen name="modals/kyc"         options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
+      <Stack.Screen name="modals/addcard" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
+      <Stack.Screen name="modals/kyc" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
+      <Stack.Screen name="modals/payments" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
     </Stack>
   );
 }
