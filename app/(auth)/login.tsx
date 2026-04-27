@@ -32,13 +32,13 @@ export default function Login() {
   function formatDisplay(raw: string) {
     const d = raw.slice(0, 9);
     if (d.length <= 2) return d;
-    if (d.length <= 5) return `${d.slice(0, 2)} ${d.slice(2)}`;
-    if (d.length <= 7) return `${d.slice(0, 2)} ${d.slice(2, 5)} ${d.slice(5)}`;
-    return `${d.slice(0, 2)} ${d.slice(2, 5)} ${d.slice(5, 7)} ${d.slice(7)}`;
+    if (d.length <= 5) return ${d.slice(0, 2)} ${d.slice(2)};
+    if (d.length <= 7) return ${d.slice(0, 2)} ${d.slice(2, 5)} ${d.slice(5)};
+    return ${d.slice(0, 2)} ${d.slice(2, 5)} ${d.slice(5, 7)} ${d.slice(7)};
   }
 
   const digits = phone.replace(/\D/g, '');
-  const fullPhone = `+998${digits}`;
+  const fullPhone = +998${digits};
   const isOk = digits.length === 9;
 
   function startTimer() {
@@ -46,10 +46,7 @@ export default function Login() {
     if (timerRef.current) clearInterval(timerRef.current);
     timerRef.current = setInterval(() => {
       setCountdown(c => {
-        if (c <= 1) {
-          clearInterval(timerRef.current);
-          return 0;
-        }
+        if (c <= 1) { clearInterval(timerRef.current); return 0; }
         return c - 1;
       });
     }, 1000);
@@ -123,34 +120,22 @@ export default function Login() {
     }
   }
 
-  const fmtTimer = `${Math.floor(countdown / 60)}:${String(countdown % 60).padStart(2, '0')}`;
+  const fmtTimer = ${Math.floor(countdown / 60)}:${String(countdown % 60).padStart(2, '0')};
 
   return (
     <SafeAreaView style={s.root}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={s.kav}>
-        <View style={s.langRow}>
-          {(['uz', 'ru', 'en'] as const).map(l => (
-            <TouchableOpacity
-              key={l}
-              style={[s.langBtn, lang === l && s.langOn]}
-              onPress={() => changeLang(l)}
-            >
-              <Text style={[s.langTxt, lang === l && s.langOnTxt]}>
-                {l === 'uz' ? 'UZ' : l === 'ru' ? 'RU' : 'EN'}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
         <View style={s.body}>
+
+          {/* Logo */}
           <View style={s.logo}>
-            <LinearGradient
+             <LinearGradient
               colors={['#7B2FBE', '#C44AFF', '#FF6B00']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={s.logoBox}
             >
-              <Text style={s.logoP}>OS</Text>
+              <Text style={s.logoP}>P</Text>
             </LinearGradient>
             <View style={{ flexDirection: 'row', gap: 4, alignItems: 'baseline' }}>
               <Text style={s.logoOson}>Oson</Text>
@@ -159,6 +144,7 @@ export default function Login() {
             <Text style={s.logoTag}>TEZ • OSON • ISHONCHLI</Text>
           </View>
 
+          {/* TELEFON */}
           {step === 'phone' && (
             <View style={s.card}>
               <Text style={s.cardH}>{t('enterPhone')}</Text>
@@ -177,9 +163,22 @@ export default function Login() {
                   maxLength={12}
                 />
               </View>
-              <View style={s.badge}>
-                <Text style={s.badgeTxt}>SMS orqali xavfsiz tasdiqlash</Text>
+
+              {/* Til tanlash */}
+              <View style={s.langRow}>
+                {(['uz', 'ru', 'en'] as const).map(l => (
+                  <TouchableOpacity
+                    key={l}
+                    style={[s.langBtn, lang === l && s.langOn]}
+                    onPress={() => changeLang(l)}
+                  >
+                    <Text style={[s.langTxt, lang === l && s.langOnTxt]}>
+                      {l === 'uz' ? 'UZ' : l === 'ru' ? 'RU' : 'EN'}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
               </View>
+
               <TouchableOpacity
                 onPress={sendOTP}
                 disabled={loading || !isOk}
@@ -187,12 +186,16 @@ export default function Login() {
                 activeOpacity={0.85}
               >
                 <LinearGradient colors={C.gBrand} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.btnGrad}>
-                  {loading ? <ActivityIndicator color="#FFF" size="small" /> : <Text style={s.btnTxt}>{t('continue')}</Text>}
+                  {loading
+                    ? <ActivityIndicator color="#FFF" size="small" />
+                    : <Text style={s.btnTxt}>{t('continue')} →</Text>
+                  }
                 </LinearGradient>
               </TouchableOpacity>
             </View>
           )}
 
+          {/* OTP */}
           {step === 'otp' && (
             <View style={s.card}>
               <Text style={s.cardH}>{t('enterCode')}</Text>
@@ -225,11 +228,11 @@ export default function Login() {
               )}
               <View style={s.otpFoot}>
                 <TouchableOpacity onPress={() => { setStep('phone'); setOtp(['', '', '', '', '', '']); }}>
-                  <Text style={s.linkTxt}>Raqamni o'zgartirish</Text>
+                  <Text style={s.linkTxt}>Raqamni ozgartirish</Text>
                 </TouchableOpacity>
                 {countdown > 0 ? (
                   <Text style={s.timerTxt}>{fmtTimer}</Text>
-                ) : (
+                 ) : (
                   <TouchableOpacity onPress={sendOTP} disabled={loading}>
                     <Text style={[s.linkTxt, { color: C.orange }]}>Qayta yuborish</Text>
                   </TouchableOpacity>
@@ -238,10 +241,11 @@ export default function Login() {
             </View>
           )}
 
+          {/* ISM */}
           {step === 'name' && (
             <View style={s.card}>
               <Text style={s.cardH}>{t('enterName')}</Text>
-              <Text style={s.cardSub}>Birinchi marta ro'yxatdan o'tyapsiz</Text>
+              <Text style={s.cardSub}>Birinchi marta royxatdan otyapsiz</Text>
               <TextInput
                 style={s.nameIn}
                 value={name}
@@ -260,11 +264,15 @@ export default function Login() {
                 activeOpacity={0.85}
               >
                 <LinearGradient colors={C.gBrand} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.btnGrad}>
-                  {loading ? <ActivityIndicator color="#FFF" size="small" /> : <Text style={s.btnTxt}>{t('start')}</Text>}
+                  {loading
+                    ? <ActivityIndicator color="#FFF" size="small" />
+                    : <Text style={s.btnTxt}>{t('start')}</Text>
+                  }
                 </LinearGradient>
               </TouchableOpacity>
             </View>
           )}
+
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -274,11 +282,6 @@ export default function Login() {
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg },
   kav: { flex: 1 },
-  langRow: { flexDirection: 'row', justifyContent: 'flex-end', paddingHorizontal: S.lg, paddingTop: S.sm, gap: S.sm },
-  langBtn: { paddingHorizontal: 12, paddingVertical: 5, borderRadius: R.full, backgroundColor: C.elevated, borderWidth: 1, borderColor: C.border },
-  langOn: { backgroundColor: C.primaryBg, borderColor: C.primary },
-  langTxt: { fontSize: 12, color: C.t3, fontWeight: '600' },
-  langOnTxt: { color: C.primaryLight },
   body: { flex: 1, paddingHorizontal: 16, justifyContent: 'center', gap: 20 },
   logo: { alignItems: 'center', gap: 6 },
   logoBox: { width: 60, height: 60, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
@@ -290,11 +293,14 @@ const s = StyleSheet.create({
   cardH: { fontSize: 16, fontWeight: '800', color: C.t1 },
   cardSub: { fontSize: 12, color: C.t2, lineHeight: 17 },
   phoneRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: C.elevated, borderRadius: R.md, borderWidth: 1, borderColor: C.border, height: 50, overflow: 'hidden' },
-  prefix: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 12, borderRightWidth: 1, borderRightColor: C.border, height: '100%' },
+  prefix: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, borderRightWidth: 1, borderRightColor: C.border, height: '100%' },
   prefixTxt: { fontSize: 14, fontWeight: '700', color: C.t2 },
   phoneIn: { flex: 1, paddingHorizontal: 12, fontSize: 16, fontWeight: '600', color: C.t1, letterSpacing: 0.5 },
-  badge: { backgroundColor: 'rgba(0,200,150,0.07)', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8, borderWidth: 1, borderColor: 'rgba(0,200,150,0.18)' },
-  badgeTxt: { fontSize: 11, color: C.success, textAlign: 'center' },
+  langRow: { flexDirection: 'row', gap: 8 },
+  langBtn: { flex: 1, paddingVertical: 8, borderRadius: R.md, backgroundColor: C.elevated, borderWidth: 1, borderColor: C.border, alignItems: 'center' },
+  langOn: { backgroundColor: C.primaryBg, borderColor: C.primary },
+  langTxt: { fontSize: 13, color: C.t3, fontWeight: '600' },
+  langOnTxt: { color: C.primaryLight },
   btn: { borderRadius: R.md, overflow: 'hidden' },
   btnGrad: { height: 50, alignItems: 'center', justifyContent: 'center' },
   btnTxt: { fontSize: 15, fontWeight: '800', color: '#FFF' },
