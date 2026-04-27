@@ -32,13 +32,13 @@ export default function Login() {
   function formatDisplay(raw: string) {
     const d = raw.slice(0, 9);
     if (d.length <= 2) return d;
-    if (d.length <= 5) return `${d.slice(0, 2)} ${d.slice(2)}`;
-    if (d.length <= 7) return `${d.slice(0, 2)} ${d.slice(2, 5)} ${d.slice(5)}`;
-    return `${d.slice(0, 2)} ${d.slice(2, 5)} ${d.slice(5, 7)} ${d.slice(7)}`;
+    if (d.length <= 5) return ${d.slice(0, 2)} ${d.slice(2)};
+    if (d.length <= 7) return ${d.slice(0, 2)} ${d.slice(2, 5)} ${d.slice(5)};
+    return ${d.slice(0, 2)} ${d.slice(2, 5)} ${d.slice(5, 7)} ${d.slice(7)};
   }
 
   const digits = phone.replace(/\D/g, '');
-  const fullPhone = `+998${digits}`;
+  const fullPhone = +998${digits};
   const isOk = digits.length === 9;
 
   function startTimer() {
@@ -120,7 +120,7 @@ export default function Login() {
     }
   }
 
-  const fmtTimer = `${Math.floor(countdown / 60)}:${String(countdown % 60).padStart(2, '0')}`;
+  const fmtTimer = ${Math.floor(countdown / 60)}:${String(countdown % 60).padStart(2, '0')};
 
   return (
     <SafeAreaView style={s.root}>
@@ -129,7 +129,7 @@ export default function Login() {
 
           {/* Logo */}
           <View style={s.logo}>
-            <LinearGradient
+             <LinearGradient
               colors={['#7B2FBE', '#C44AFF', '#FF6B00']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
@@ -232,7 +232,7 @@ export default function Login() {
                 </TouchableOpacity>
                 {countdown > 0 ? (
                   <Text style={s.timerTxt}>{fmtTimer}</Text>
-                ) : (
+                 ) : (
                   <TouchableOpacity onPress={sendOTP} disabled={loading}>
                     <Text style={[s.linkTxt, { color: C.orange }]}>Qayta yuborish</Text>
                   </TouchableOpacity>
