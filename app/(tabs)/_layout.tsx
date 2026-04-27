@@ -1,17 +1,18 @@
 import { useEffect, useRef } from 'react';
-import { Stack, router } from 'expo-router';
+import { Stack, router, usePathname } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { StyleSheet, AppState } from 'react-native';
-import { AuthProvider, useAuth } from '../hooks/useAuth';
-import { LangProvider } from '../hooks/useLang';
+import { AuthProvider, useAuth } from '../../hooks/useAuth';
+import { LangProvider } from '../../hooks/useLang';
 
 SplashScreen.preventAutoHideAsync();
 
 function Nav() {
   const { loading, isLoggedIn, user } = useAuth();
   const appState = useRef(AppState.currentState);
+  const pathname = usePathname();
 
   useEffect(() => {
     const sub = AppState.addEventListener('change', nextState => {
@@ -19,14 +20,15 @@ function Nav() {
         appState.current.match(/inactive|background/) &&
         nextState === 'active' &&
         isLoggedIn &&
-        user?.hasPin
+        user?.hasPin &&
+        pathname !== '/(auth)/pin-lock'
       ) {
         router.replace('/(auth)/pin-lock');
       }
       appState.current = nextState;
     });
     return () => sub.remove();
-  }, [isLoggedIn, user?.hasPin]);
+  }, [isLoggedIn, user?.hasPin, pathname]);
 
   useEffect(() => {
     if (loading) return;
