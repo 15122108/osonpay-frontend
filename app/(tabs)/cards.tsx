@@ -32,7 +32,7 @@ export default function Cards() {
   }
 
   async function payByQR() {
-    if (!scanInput  !scanAmount  Number(scanAmount) < 1000) {
+    if (!scanInput || !scanAmount || Number(scanAmount) < 1000) {
       Alert.alert(t('error'), 'QR ma\'lumot va summa kiriting');
       return;
     }
@@ -92,8 +92,7 @@ export default function Cards() {
           </View>
         ) : (
           <View style={s.list}>
-            {cards.
-               map(card=>(
+            {cards.map(card=>(
               <View key={card.id}>
                 <LinearGradient colors={[card.color_from||'#7B2FBE',card.color_to||'#FF6B00']} start={{x:0,y:0}} end={{x:1,y:1}} style={s.card}>
                   <View style={s.cardTop}>
@@ -175,7 +174,7 @@ export default function Cards() {
               </LinearGradient>
             </TouchableOpacity>
             <TouchableOpacity style={s.modalClose} onPress={()=>setScanModal(false)}>
-            <Text style={s.modalCloseTxt}>Bekor qilish</Text>
+              <Text style={s.modalCloseTxt}>Bekor qilish</Text>
             </TouchableOpacity>
           </View>
         </View>
