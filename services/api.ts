@@ -12,7 +12,7 @@ async function req(method: string, path: string, body?: any) {
     method,
     headers: {
       'Content-Type': 'application/json',
-      ...(token ? { Authorization: Bearer ${token} } : {}),
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
     ...(body ? { body: JSON.stringify(body) } : {}),
     signal: controller.signal,
@@ -22,12 +22,12 @@ async function req(method: string, path: string, body?: any) {
     const res  = await fetch(`${BASE_URL}${path}`, opts);
     clearTimeout(timeout);
     const data = await res.json();
-    if (!res.ok) throw new Error(data.detail  data.error  'Xatolik yuz berdi');
+    if (!res.ok) throw new Error(data.detail || data.error || 'Xatolik yuz berdi');
     return data;
   } catch (e: any) {
     clearTimeout(timeout);
     if (e.name === 'AbortError')
-      throw new Error('Serverga ulanib bolmadi. Qayta urinib koring');
+      throw new Error('Serverga ulanib bo\'lmadi. Qayta urinib ko\'ring');
     if (e.message === 'Network request failed')
       throw new Error('Internet aloqasini tekshiring');
     throw e;
@@ -61,7 +61,7 @@ export const api = {
     req('POST', '/transactions/topup', { amount }),
 
   getHistory:     (page = 1, type?: string) =>
-    req('GET', /transactions?page=${page}${type ? `&type=${type} : ''}`),
+    req('GET', `/transactions?page=${page}${type ? `&type=${type}` : ''}`),
   getStats:       () => req('GET', '/transactions/stats'),
   getTransaction: (id: string) => req('GET', `/transactions/${id}`),
   saveFcmToken:   (token: string, platform: string) =>
@@ -70,7 +70,7 @@ export const api = {
   // Cards
   getCards:       ()           => req('GET',    '/cards'),
   addCard:        (data: any)  => req('POST',   '/cards', data),
-  setDefaultCard: (id: string) => req('PUT',    /cards/${id}/default, {}),
+  setDefaultCard: (id: string) => req('PUT',    `/cards/${id}/default`, {}),
   deleteCard:     (id: string) => req('DELETE', `/cards/${id}`),
   cardTransfer:   (fromCardId: string, toCardNumber: string, amount: number) =>
     req('POST', '/cards/transfer', { from_card_id: fromCardId, to_card_number: toCardNumber, amount }),
