@@ -59,7 +59,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser({
       id:         userData.id,
       phone:      userData.phone,
-      fullName:   userData.fullName  userData.full_name  '',
+      fullName:   userData.fullName || userData.full_name || '',
       balance:    0,
       language:   'uz',
       hasPin,
