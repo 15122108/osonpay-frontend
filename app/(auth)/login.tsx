@@ -123,7 +123,7 @@ export default function Login() {
     }
   }
 
-  const fmtTimer = ${Math.floor(countdown / 60)}:${String(countdown % 60).padStart(2, '0')};
+  const fmtTimer = '${Math.floor(countdown / 60)}:${String(countdown % 60).padStart(2, '0')}';
 
   return (
     <SafeAreaView style={s.root}>
