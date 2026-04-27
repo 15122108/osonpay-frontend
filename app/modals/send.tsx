@@ -20,15 +20,15 @@ export default function Send() {
   const [loading, setLoading] = useState(false);
 
   const digits = phone.replace(/\D/g,'');
-  const e164 = +${digits.startsWith('998')?digits:'998'+digits};
+  const e164 = `+${digits.startsWith('998') ? digits : '998' + digits}`;
 
   function dispPhone() {
-    const d=digits.slice(0,12);
-    if(d.length<=3)return '+'+d;
-    if(d.length<=5)return +${d.slice(0,3)} ${d.slice(3)};
-    if(d.length<=8)return +${d.slice(0,3)} ${d.slice(3,5)} ${d.slice(5)};
-    if(d.length<=10)return +${d.slice(0,3)} ${d.slice(3,5)} ${d.slice(5,8)} ${d.slice(8)};
-    return +${d.slice(0,3)} ${d.slice(3,5)} ${d.slice(5,8)} ${d.slice(8,10)} ${d.slice(10,12)};
+    const d = digits.slice(0, 12);
+    if (d.length <= 3) return '+' + d;
+    if (d.length <= 5) return `+${d.slice(0,3)} ${d.slice(3)}`;
+    if (d.length <= 8) return `+${d.slice(0,3)} ${d.slice(3,5)} ${d.slice(5)}`;
+    if (d.length <= 10) return `+${d.slice(0,3)} ${d.slice(3,5)} ${d.slice(5,8)} ${d.slice(8)}`;
+    return `+${d.slice(0,3)} ${d.slice(3,5)} ${d.slice(5,8)} ${d.slice(8,10)} ${d.slice(10,12)}`;
   }
 
   function formatCardNumber(val: string) {
@@ -40,13 +40,13 @@ export default function Send() {
     setLoading(true);
     try {
       if (mode === 'phone') {
-        await api.sendMoney(e164, Number(amount), note||undefined);
-        Alert.alert('✅', ${formatMoney(Number(amount))} UZS yuborildi!, [{text:t('ok'),onPress:()=>router.back()}]);
+        await api.sendMoney(e164, Number(amount), note || undefined);
+        Alert.alert('✅', `${formatMoney(Number(amount))} UZS yuborildi!`, [{text: t('ok'), onPress: () => router.back()}]);
       } else {
         await api.cardTransfer(fromCardId, cardNumber.replace(/\s/g,''), Number(amount));
-        Alert.alert('✅', ${formatMoney(Number(amount))} UZS karta orqali yuborildi!, [{text:t('ok'),onPress:()=>router.back()}]);
+        Alert.alert('✅', `${formatMoney(Number(amount))} UZS karta orqali yuborildi!`, [{text: t('ok'), onPress: () => router.back()}]);
       }
-    } catch(e:any) { Alert.alert(t('error'),e.message); }
+    } catch(e: any) { Alert.alert(t('error'), e.message); }
     finally { setLoading(false); }
   }
 
@@ -84,8 +84,15 @@ export default function Send() {
               <Text style={s.label}>{t('sendTo')}</Text>
               <View style={s.phoneBox}>
                 <Text style={{fontSize:20}}>🇺🇿</Text>
-                <TextInput style={s.phoneInput} value={dispPhone()} onChangeText={t=>setPhone(t.
-                  replace(/\D/g,''))} keyboardType="phone-pad" placeholder="+998 90 123 45 67" placeholderTextColor={C.t3} autoFocus/>
+                <TextInput
+                  style={s.phoneInput}
+                  value={dispPhone()}
+                  onChangeText={v => setPhone(v.replace(/\D/g,''))}
+                  keyboardType="phone-pad"
+                  placeholder="+998 90 123 45 67"
+                  placeholderTextColor={C.t3}
+                  autoFocus
+                />
               </View>
               <TouchableOpacity onPress={()=>setStep('amount')} disabled={digits.length<12} style={[s.btnWrap,digits.length<12&&{opacity:0.4}]}>
                 <LinearGradient colors={C.gBrand} start={{x:0,y:0}} end={{x:1,y:0}} style={s.btn}>
@@ -163,8 +170,7 @@ export default function Send() {
                   ...(note&&mode==='phone'?[{label:t('note'),value:note}]:[]),
                   {label:t('fee'),value:t('freeTransfer')},
                 ].map((row,i)=>(
-                  <View key={i} style={s.
-                      confRow}>
+                  <View key={i} style={s.confRow}>
                     <Text style={s.confLabel}>{row.label}</Text>
                     <Text style={[s.confVal,(row as any).highlight&&{color:C.orange,fontSize:18,fontWeight:'800'}]}>{row.value}</Text>
                   </View>
