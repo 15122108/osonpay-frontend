@@ -41,16 +41,16 @@ export const R = { sm: 8, md: 12, lg: 16, xl: 20, xxl: 28, full: 9999 };
 
 export function formatMoney(n: number | string): string {
   const v = Math.abs(Number(n));
-  if (v >= 1_000_000_000) return ${(v / 1_000_000_000).toFixed(2)} mlrd;
-  if (v >= 1_000_000) return ${(v / 1_000_000).toFixed(2)} mln;
-  if (v >= 1_000) return ${(v / 1_000).toFixed(0)} ming;
+  if (v >= 1_000_000_000) return `${(v / 1_000_000_000).toFixed(2)} mlrd`;
+  if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(2)} mln`;
+  if (v >= 1_000) return `${(v / 1_000).toFixed(0)} ming`;
   return v.toLocaleString('ru-RU');
 }
 
 export function formatPhone(phone: string): string {
   const p = phone.replace(/\D/g, '');
   if (p.length === 12)
-    return +${p.slice(0,3)} ${p.slice(3,5)} ${p.slice(5,8)} ${p.slice(8,10)} ${p.slice(10,12)};
+    return `+${p.slice(0,3)} ${p.slice(3,5)} ${p.slice(5,8)} ${p.slice(8,10)} ${p.slice(10,12)}`;
   return phone;
 }
 
@@ -66,5 +66,5 @@ export function formatDate(dateStr: string): string {
 }
 
 export function maskCard(card: string): string {
-  return **** **** **** ${card.slice(-4)};
+  return `**** **** **** ${card.slice(-4)}`;
 }
