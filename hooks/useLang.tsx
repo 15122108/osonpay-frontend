@@ -16,25 +16,25 @@ const T: Record<Lang, Record<string, string>> = {
     createPinDesc: '4 ta raqamli PIN-kod',
     enterPin: 'PIN-kodni kiriting',
     pinMismatch: 'PIN kodlar mos kelmadi',
-    pinSuccess: 'PIN-kod o\'rnatildi',
+    pinSuccess: "PIN-kod o'rnatildi",
     pinCode: 'PIN-kod',
     biometric: 'Biometrik kirish',
     forgotPin: 'PIN-kodni unutdingizmi?',
     mainBalance: 'Asosiy balans',
     send: 'Yuborish',
     receive: 'Qabul',
-    topup: 'To\'ldirish',
-    payment: 'To\'lov',
-    recentTx: 'So\'nggi tranzaksiyalar',
+    topup: "To'ldirish",
+    payment: "To'lov",
+    recentTx: "So'nggi tranzaksiyalar",
     seeAll: 'Barchasi',
     myCards: 'Mening kartalarim',
-    addCard: 'Karta qo\'shish',
-    noCards: 'Kartalar yo\'q',
-    noCardsDesc: 'Birinchi kartangizni qo\'shing',
+    addCard: "Karta qo'shish",
+    noCards: "Kartalar yo'q",
+    noCardsDesc: "Birinchi kartangizni qo'shing",
     history: 'Tarix',
     search: 'Qidirish',
     all: 'Barchasi',
-    noTx: 'Tranzaksiyalar yo\'q',
+    noTx: "Tranzaksiyalar yo'q",
     profile: 'Profil',
     language: 'Til',
     security: 'Xavfsizlik',
@@ -59,8 +59,8 @@ const T: Record<Lang, Record<string, string>> = {
     start: 'Boshlash',
     passportSeries: 'Pasport seriyasi',
     passportNumber: 'Pasport raqami',
-    birthDate: 'Tug\'ilgan sana',
-    fullName: 'To\'liq ism',
+    birthDate: "Tug'ilgan sana",
+    fullName: "To'liq ism",
     namePlaceholder: 'FAMILIYA ISM',
   },
   ru: {
@@ -137,83 +137,83 @@ const T: Record<Lang, Record<string, string>> = {
     pinSuccess: 'PIN code set',
     pinCode: 'PIN code',
     biometric: 'Biometric login',
-        forgotPin: 'Forgot PIN?',
-        mainBalance: 'Main balance',
-        send: 'Send',
-        receive: 'Receive',
-        topup: 'Top up',
-        payment: 'Payment',
-        recentTx: 'Recent transactions',
-        seeAll: 'See all',
-        myCards: 'My cards',
-        addCard: 'Add card',
-        noCards: 'No cards',
-        noCardsDesc: 'Add your first card',
-        history: 'History',
-        search: 'Search',
-        all: 'All',
-        noTx: 'No transactions',
-        profile: 'Profile',
-        language: 'Language',
-        security: 'Security',
-        passport: 'Passport',
-        notifications: 'Notifications',
-        logout: 'Logout',
-        logoutConfirm: 'Are you sure you want to logout?',
-        cancel: 'Cancel',
-        sendTo: 'Send to',
-        amount: 'Amount',
-        note: 'Note',
-        continue: 'Continue',
-        recipient: 'Recipient',
-        fee: 'Fee',
-        freeTransfer: 'Free',
-        total: 'Total',
-        confirm: 'Confirm',
-        ok: 'OK',
-        error: 'Error',
-        success: 'Success',
-        save: 'Save',
-        start: 'Start',
-        passportSeries: 'Passport series',
-        passportNumber: 'Passport number',
-        birthDate: 'Date of birth',
-        fullName: 'Full name',
-        namePlaceholder: 'LAST NAME FIRST NAME',
-      },
-    };
+    forgotPin: 'Forgot PIN?',
+    mainBalance: 'Main balance',
+    send: 'Send',
+    receive: 'Receive',
+    topup: 'Top up',
+    payment: 'Payment',
+    recentTx: 'Recent transactions',
+    seeAll: 'See all',
+    myCards: 'My cards',
+    addCard: 'Add card',
+    noCards: 'No cards',
+    noCardsDesc: 'Add your first card',
+    history: 'History',
+    search: 'Search',
+    all: 'All',
+    noTx: 'No transactions',
+    profile: 'Profile',
+    language: 'Language',
+    security: 'Security',
+    passport: 'Passport',
+    notifications: 'Notifications',
+    logout: 'Logout',
+    logoutConfirm: 'Are you sure you want to logout?',
+    cancel: 'Cancel',
+    sendTo: 'Send to',
+    amount: 'Amount',
+    note: 'Note',
+    continue: 'Continue',
+    recipient: 'Recipient',
+    fee: 'Fee',
+    freeTransfer: 'Free',
+    total: 'Total',
+    confirm: 'Confirm',
+    ok: 'OK',
+    error: 'Error',
+    success: 'Success',
+    save: 'Save',
+    start: 'Start',
+    passportSeries: 'Passport series',
+    passportNumber: 'Passport number',
+    birthDate: 'Date of birth',
+    fullName: 'Full name',
+    namePlaceholder: 'LAST NAME FIRST NAME',
+  },
+};
 
-    interface LangCtx {
-      lang: Lang;
-      t: (key: string) => string;
-      changeLang: (l: Lang) => void;
-    }
+interface LangCtx {
+  lang: Lang;
+  t: (key: string) => string;
+  changeLang: (l: Lang) => void;
+}
 
-    const Ctx = createContext<LangCtx>({} as LangCtx);
+const Ctx = createContext<LangCtx>({} as LangCtx);
 
-    export function LangProvider({ children }: { children: React.ReactNode }) {
-      const [lang, setLang] = useState<Lang>('uz');
+export function LangProvider({ children }: { children: React.ReactNode }) {
+  const [lang, setLang] = useState<Lang>('uz');
 
-      useEffect(() => {
-        AsyncStorage.getItem('lang').then(l => {
-          if (l === 'uz'  l === 'ru'  l === 'en') setLang(l);
-        });
-      }, []);
+  useEffect(() => {
+    AsyncStorage.getItem('lang').then(l => {
+      if (l === 'uz' || l === 'ru' || l === 'en') setLang(l);
+    });
+  }, []);
 
-      function t(key: string): string {
-        return T[lang][key]  T['uz'][key]  key;
-      }
+  function t(key: string): string {
+    return T[lang][key] || T['uz'][key] || key;
+  }
 
-      async function changeLang(l: Lang) {
-        setLang(l);
-        await AsyncStorage.setItem('lang', l);
-      }
+  async function changeLang(l: Lang) {
+    setLang(l);
+    await AsyncStorage.setItem('lang', l);
+  }
 
-      return (
-        <Ctx.Provider value={{ lang, t, changeLang }}>
-          {children}
-        </Ctx.Provider>
-      );
-    }
+  return (
+    <Ctx.Provider value={{ lang, t, changeLang }}>
+      {children}
+    </Ctx.Provider>
+  );
+}
 
-    export const useLang = () => useContext(Ctx);
+export const useLang = () => useContext(Ctx);
