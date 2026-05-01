@@ -1,89 +1,66 @@
-import { useEffect, useRef, useState } from 'react';
-import { Stack, router, usePathname } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
-import * as SplashScreen from 'expo-splash-screen';
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { StyleSheet, AppState } from 'react-native';
-import { AuthProvider, useAuth } from '../hooks/useAuth';
-import { LangProvider } from '../hooks/useLang';
+import { Tabs } from 'expo-router';
+import { C } from '../../constants/theme';
+import { Text } from 'react-native';
 
-SplashScreen.preventAutoHideAsync();
-
-function Nav() {
-  const { loading, isLoggedIn, user } = useAuth();
-  const appState = useRef(AppState.currentState);
-  const pathname = usePathname();
-  const [pinShown, setPinShown] = useState(false);
-
-  useEffect(() => {
-    const sub = AppState.addEventListener('change', nextState => {
-      if (
-        appState.current.match(/inactive|background/) &&
-        nextState === 'active' &&
-        isLoggedIn &&
-        user?.hasPin &&
-        !pathname.includes('pin-lock')
-      ) {
-        setPinShown(false);
-        router.replace('/(auth)/pin-lock');
-      }
-      appState.current = nextState;
-    });
-    return () => sub.remove();
-  }, [isLoggedIn, user?.hasPin, pathname]);
-
-  useEffect(() => {
-    if (loading) return;
-    SplashScreen.hideAsync();
-
-    if (!isLoggedIn) {
-      router.replace('/(auth)/login');
-      return;
-    }
-
-    if (!user?.hasPin) {
-      router.replace('/(auth)/create-pin');
-      return;
-    }
-
-    if (!pinShown) {
-      setPinShown(true);
-      router.replace('/(auth)/pin-lock');
-    }
-  }, [loading, isLoggedIn, user?.hasPin]);
-
+function Icon({ label, focused }: { label: string; focused: boolean }) {
+  const icons: Record<string, string> = {
+    home: '🏠',
+    cards: '💳',
+    history: '📋',
+    profile: '👤',
+  };
   return (
-    <Stack screenOptions={{
-      headerShown: false,
-      contentStyle: { backgroundColor: '#0D0A14' },
-      animation: 'slide_from_right',
-    }}>
-      <Stack.Screen name="(auth)/login" />
-      <Stack.Screen name="(auth)/create-pin" />
-      <Stack.Screen name="(auth)/pin-lock" options={{ gestureEnabled: false }} />
-      <Stack.Screen name="(tabs)" />
-      <Stack.Screen name="modals/send" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
-      <Stack.Screen name="modals/receive" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
-      <Stack.Screen name="modals/topup" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
-      <Stack.Screen name="modals/transaction" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
-      <Stack.Screen name="modals/addcard" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
-      <Stack.Screen name="modals/kyc" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
-      <Stack.Screen name="modals/payments" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
-    </Stack>
+    <Text style={{ fontSize: 20, opacity: focused ? 1 : 0.5 }}>
+      {icons[label] ?? '●'}
+    </Text>
   );
 }
 
-export default function Root() {
+export default function TabsLayout() {
   return (
-    <AuthProvider>
-      <LangProvider>
-        <GestureHandlerRootView style={s.root}>
-          <StatusBar style="light" backgroundColor="#0D0A14" />
-          <Nav />
-        </GestureHandlerRootView>
-      </LangProvider>
-    </AuthProvider>
+    <Tabs
+      screenOptions={{
+        headerShown: false,
+        tabBarStyle: {
+          backgroundColor: C.surface,
+          borderTopColor: C.border,
+          borderTopWidth: 1,
+          height: 60,
+          paddingBottom: 8,
+        },
+        tabBarActiveTintColor: C.primaryLight,
+        tabBarInactiveTintColor: C.t3,
+        tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
+      }}
+    >
+      <Tabs.Screen
+        name="index"
+        options={{
+          title: 'Bosh sahifa',
+          tabBarIcon: ({ focused }) => <Icon label="home" focused={focused} />,
+        }}
+      />
+      <Tabs.Screen
+        name="cards"
+        options={{
+          title: 'Kartalar',
+          tabBarIcon: ({ focused }) => <Icon label="cards" focused={focused} />,
+        }}
+      />
+      <Tabs.Screen
+        name="history"
+        options={{
+          title: 'Tarix',
+          tabBarIcon: ({ focused }) => <Icon label="history" focused={focused} />,
+        }}
+      />
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: 'Profil',
+          tabBarIcon: ({ focused }) => <Icon label="profile" focused={focused} />,
+        }}
+      />
+    </Tabs>
   );
 }
-
-const s = StyleSheet.create({ root: { flex: 1 } });
