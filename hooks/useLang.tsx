@@ -15,11 +15,11 @@ const T: Record<Lang, Record<string, string>> = {
     confirmPin: 'PIN-kodni tasdiqlang',
     createPinDesc: '4 ta raqamli PIN-kod',
     enterPin: 'PIN-kodni kiriting',
-    pinMismatch: "PIN kodlar mos kelmadi",
+    pinMismatch: 'PIN kodlar mos kelmadi',
     pinSuccess: "PIN-kod o'rnatildi",
     pinCode: 'PIN-kod',
     biometric: 'Biometrik kirish',
-    forgotPin: "PIN-kodni unutdingizmi?",
+    forgotPin: 'PIN-kodni unutdingizmi?',
     mainBalance: 'Asosiy balans',
     send: 'Yuborish',
     receive: 'Qabul',
@@ -29,12 +29,12 @@ const T: Record<Lang, Record<string, string>> = {
     seeAll: 'Barchasi',
     myCards: 'Mening kartalarim',
     addCard: "Karta qo'shish",
-    noCards: "Kartalar yo'q",
-    noCardsDesc: 'Birinchi kartangizni qo\'shing',
+    noCards: 'Kartalar yo\'q',
+    noCardsDesc: "Birinchi kartangizni qo'shing",
     history: 'Tarix',
     search: 'Qidirish',
     all: 'Barchasi',
-    noTx: "Tranzaksiyalar yo'q",
+    noTx: 'Tranzaksiyalar yo\'q',
     profile: 'Profil',
     language: 'Til',
     security: 'Xavfsizlik',
@@ -196,11 +196,13 @@ export function LangProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     AsyncStorage.getItem('lang').then(l => {
+      // FIX: `||` operatorlari singan edi — 'en' hech qachon o'rnatilmayotgan edi
       if (l === 'uz' || l === 'ru' || l === 'en') setLang(l);
     });
   }, []);
 
   function t(key: string): string {
+    // FIX: `||` operatorlari singan edi — tarjima topilmasa uz ga fallback
     return T[lang][key] || T['uz'][key] || key;
   }
 
