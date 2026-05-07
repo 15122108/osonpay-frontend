@@ -1,69 +1,70 @@
 import { Tabs } from 'expo-router';
-import { C } from '../../constants/theme';
-import { Text, View } from 'react-native';
+import { Text, StyleSheet, View, Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { C, S } from '../../constants/theme';
 
-function Icon({ label, focused }: { label: string; focused: boolean }) {
-  const icons: Record<string, string> = {
-    index: '🏠',
-    cards: '💳',
-    history: '📋',
-    profile: '👤',
-  };
+function TabIcon({ icon, label, focused }: { icon: string; label: string; focused: boolean }) {
   return (
-    <View style={{ alignItems: 'center' }}>
-      <Text style={{ fontSize: 20, opacity: focused ? 1 : 0.5 }}>
-        {icons[label] ?? '●'}
-      </Text>
+    <View style={ti.wrap}>
+      <Text style={[ti.icon, focused && ti.iconActive]}>{icon}</Text>
+      <Text style={[ti.label, focused && ti.labelActive]}>{label}</Text>
     </View>
   );
 }
 
+const ti = StyleSheet.create({
+  wrap: { alignItems: 'center', gap: 2, paddingTop: 4 },
+  icon: { fontSize: 22, opacity: 0.45 },
+  iconActive: { opacity: 1 },
+  label: { fontSize: 10, color: C.t3, fontWeight: '500' },
+  labelActive: { color: C.primary, fontWeight: '700' },
+});
+
 export default function TabLayout() {
+  // FIX 2: iPhone home indicator uchun pastki bo'shliq dinamik hisoblanadi
+  const insets = useSafeAreaInsets();
+  const tabBarHeight = 56 + insets.bottom;
+
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
         tabBarStyle: {
-          backgroundColor: C.surface,
+          // FIX 1: C.surface mavjud emas — C.bg ga o'zgartirildi
+          backgroundColor: C.bg,
           borderTopColor: C.border,
-          borderTopWidth: 1,
-          height: 60,
-          paddingBottom: 8,
+          borderTopWidth: 0.5,
+          // FIX 2: height hardcoded 80 edi — insets bilan dinamik
+          height: tabBarHeight,
+          paddingBottom: insets.bottom || 8,
+          // FIX 3: Android'da elevation soyasi olib tashlandi (borderTopWidth bilan ziddiyat)
+          elevation: 0,
         },
-        tabBarActiveTintColor: C.primary,
-        tabBarInactiveTintColor: C.t3,
-        tabBarLabelStyle: {
-          fontSize: 11,
-          fontWeight: '600',
-        },
+        tabBarShowLabel: false,
       }}
     >
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Bosh sahifa',
-          tabBarIcon: ({ focused }) => <Icon label="index" focused={focused} />,
+          tabBarIcon: ({ focused }) => <TabIcon icon="🏠" label="Asosiy" focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="cards"
         options={{
-          title: 'Kartalar',
-          tabBarIcon: ({ focused }) => <Icon label="cards" focused={focused} />,
+          tabBarIcon: ({ focused }) => <TabIcon icon="💳" label="Kartalar" focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="history"
         options={{
-          title: 'Tarix',
-          tabBarIcon: ({ focused }) => <Icon label="history" focused={focused} />,
+          tabBarIcon: ({ focused }) => <TabIcon icon="🕐" label="Kirim-chiqim" focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
-          title: 'Profil',
-          tabBarIcon: ({ focused }) => <Icon label="profile" focused={focused} />,
+          tabBarIcon: ({ focused }) => <TabIcon icon="👤" label="Profil" focused={focused} />,
         }}
       />
     </Tabs>
