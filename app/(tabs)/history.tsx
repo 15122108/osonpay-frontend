@@ -150,12 +150,8 @@ return (
     ) : displayed.length === 0 ? (
       <View style={s.empty}>
         <Text style={{ fontSize: 60, marginBottom: 16 }}>🔍</Text>
-        <Text style={s.emptyTitle}>
-          {"Tanlangan filtrlar bo'yicha\ntranzaksiya topilmadi"}
-        </Text>
-        <Text style={s.emptyDesc}>
-          {"Filtrlarni o'zgartirib ko'ring\nyoki o'chiring"}
-        </Text>
+        <Text style={s.emptyTitle}>Tanlangan filtrlar bo'yicha{'\n'}tranzaksiya topilmadi</Text>
+        <Text style={s.emptyDesc}>Filtrlarni o'zgartirib ko'ring{'\n'}yoki o'chiring</Text>
         <TouchableOpacity
           onPress={() => {
             setFilter(undefined);
@@ -307,7 +303,10 @@ flexDirection: ‘row’, alignItems: ‘center’, backgroundColor: C.elevated,
 borderRadius: R.lg, padding: S.md, marginBottom: 8,
 borderWidth: 1, borderColor: C.border,
 },
-txIcon: { width: 46, height: 46, borderRadius: 23, alignItems: ‘center’, justifyContent: ‘center’, marginRight: S.md },
+txIcon: {
+width: 46, height: 46, borderRadius: 23,
+alignItems: ‘center’, justifyContent: ‘center’, marginRight: S.md,
+},
 txIconTxt: { fontSize: 20, fontWeight: ‘800’ },
 txMid: { flex: 1 },
 txName: { fontSize: 14, fontWeight: ‘600’, color: C.t1, marginBottom: 3 },
