@@ -1,89 +1,71 @@
-import { useEffect, useRef, useState } from 'react';
-import { Stack, router, usePathname } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
-import * as SplashScreen from 'expo-splash-screen';
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { StyleSheet, AppState } from 'react-native';
-import { AuthProvider, useAuth } from '../hooks/useAuth';
-import { LangProvider } from '../hooks/useLang';
+// app/_layout.tsx
+import { useEffect, useState } from 'react';
+import { Stack } from 'expo-router';
+import { View, ActivityIndicator, StyleSheet } from 'react-native';
+import * as SecureStore from 'expo-secure-store';
+import * as LocalAuthentication from 'expo-local-authentication';
+import { router } from 'expo-router';
+import { C } from '../constants/theme';
 
-SplashScreen.preventAutoHideAsync();
+// Kalitlar
+export const KEYS = {
+  PIN: 'app_pin',
+  TOKEN: 'app_token',
+  BIO: 'app_bio',
+};
 
-function Nav() {
-  const { loading, isLoggedIn, user } = useAuth();
-  const appState = useRef(AppState.currentState);
-  const pathname = usePathname();
-  const [pinShown, setPinShown] = useState(false);
+export default function RootLayout() {
+  const [checking, setChecking] = useState(true);
 
   useEffect(() => {
-    const sub = AppState.addEventListener('change', nextState => {
-      if (
-        appState.current.match(/inactive|background/) &&
-        nextState === 'active' &&
-        isLoggedIn &&
-        user?.hasPin &&
-        !pathname.includes('pin-lock')
-      ) {
-        setPinShown(false);
-        router.replace('/(auth)/pin-lock');
+    checkAuth();
+  }, []);
+
+  async function checkAuth() {
+    try {
+      const [token, pin] = await Promise.all([
+        SecureStore.getItemAsync(KEYS.TOKEN),
+        SecureStore.getItemAsync(KEYS.PIN),
+      ]);
+
+      if (!token) {
+        // Hech qachon login qilmagan → login ekrani
+        router.replace('/(auth)/login');
+        return;
       }
-      appState.current = nextState;
-    });
-    return () => sub.remove();
-  }, [isLoggedIn, user?.hasPin, pathname]);
 
-  useEffect(() => {
-    if (loading) return;
-    SplashScreen.hideAsync();
+      if (!pin) {
+        // Token bor, lekin PIN yo'q → PIN yaratish
+        router.replace('/(auth)/create-pin');
+        return;
+      }
 
-    if (!isLoggedIn) {
-      router.replace('/(auth)/login');
-      return;
-    }
-
-    if (!user?.hasPin) {
-      router.replace('/(auth)/create-pin');
-      return;
-    }
-
-    if (!pinShown) {
-      setPinShown(true);
+      // Token ham, PIN ham bor → PIN/FaceID so'rash
       router.replace('/(auth)/pin-lock');
+    } catch {
+      router.replace('/(auth)/login');
+    } finally {
+      setChecking(false);
     }
-  }, [loading, isLoggedIn, user?.hasPin]);
+  }
+
+  if (checking) {
+    return (
+      <View style={s.splash}>
+        <ActivityIndicator color={C.primary} size="large" />
+      </View>
+    );
+  }
 
   return (
-    <Stack screenOptions={{
-      headerShown: false,
-      contentStyle: { backgroundColor: '#0D0A14' },
-      animation: 'slide_from_right',
-    }}>
-      <Stack.Screen name="(auth)/login" />
-      <Stack.Screen name="(auth)/create-pin" />
-      <Stack.Screen name="(auth)/pin-lock" options={{ gestureEnabled: false }} />
+    <Stack screenOptions={{ headerShown: false, animation: 'fade' }}>
+      <Stack.Screen name="(auth)" />
       <Stack.Screen name="(tabs)" />
-      <Stack.Screen name="modals/send" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
-      <Stack.Screen name="modals/receive" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
-      <Stack.Screen name="modals/topup" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
-      <Stack.Screen name="modals/transaction" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
-      <Stack.Screen name="modals/addcard" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
-      <Stack.Screen name="modals/kyc" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
-      <Stack.Screen name="modals/payments" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
+      <Stack.Screen name="modals" options={{ presentation: 'modal' }} />
     </Stack>
   );
 }
 
-export default function Root() {
-  return (
-    <AuthProvider>
-      <LangProvider>
-        <GestureHandlerRootView style={s.root}>
-          <StatusBar style="light" backgroundColor="#0D0A14" />
-          <Nav />
-        </GestureHandlerRootView>
-      </LangProvider>
-    </AuthProvider>
-  );
-}
-
-const s = StyleSheet.create({ root: { flex: 1 } });
+const s = StyleSheet.create({
+  splash: { flex: 1, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center' },
+});
