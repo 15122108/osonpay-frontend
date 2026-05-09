@@ -1,8 +1,11 @@
 // app/(tabs)/_layout.tsx
+// Mavjud fayllar: index.tsx, cards.tsx, history.tsx, profile.tsx
+// Hech narsa o'zgarmaydi — faqat shu fayl qo'shiladi
+
 import { Tabs } from 'expo-router';
 import { Text, View, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { C, S } from '../../constants/theme';
+import { C } from '../../constants/theme';
 
 function TabIcon({ icon, label, focused }: { icon: string; label: string; focused: boolean }) {
   return (
@@ -44,20 +47,16 @@ export default function TabLayout() {
         options={{ tabBarIcon: ({ focused }) => <TabIcon icon="🏠" label="Asosiy" focused={focused} /> }}
       />
       <Tabs.Screen
-        name="send"
-        options={{ tabBarIcon: ({ focused }) => <TabIcon icon="↩" label="O'tkazma" focused={focused} /> }}
-      />
-      <Tabs.Screen
-        name="payments"
-        options={{ tabBarIcon: ({ focused }) => <TabIcon icon="💳" label="To'lov" focused={focused} /> }}
-      />
-      <Tabs.Screen
-        name="services"
-        options={{ tabBarIcon: ({ focused }) => <TabIcon icon="⊞" label="Servislar" focused={focused} /> }}
+        name="cards"
+        options={{ tabBarIcon: ({ focused }) => <TabIcon icon="💳" label="Kartalar" focused={focused} /> }}
       />
       <Tabs.Screen
         name="history"
         options={{ tabBarIcon: ({ focused }) => <TabIcon icon="🕐" label="Kirim-chiqim" focused={focused} /> }}
+      />
+      <Tabs.Screen
+        name="profile"
+        options={{ tabBarIcon: ({ focused }) => <TabIcon icon="👤" label="Profil" focused={focused} /> }}
       />
     </Tabs>
   );
