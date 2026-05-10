@@ -1,3 +1,10 @@
+// SecureStore kalitlari
+export const KEYS = {
+  PIN:   'app_pin',
+  TOKEN: 'app_token',
+  BIO:   'app_bio',
+};
+
 export const C = {
   bg: '#0D0A14',
   surface: '#130F1E',
