@@ -98,4 +98,21 @@ export const api = {
   // ── KYC ───────────────────────────────────────────────────────────────────
   submitKYC: (data: { passport_series: string; passport_number: string; birth_date: string; full_name: string }) =>
     request<{ status: string }>('/kyc', { method: 'POST', body: JSON.stringify(data) }),
+
+  // ── Topup (hisob to'ldirish) ───────────────────────────────────────────
+  initTopup: (amount: number) =>
+    request<{ redirectUrl: string; paymentId: string }>('/topup/init', {
+      method: 'POST',
+      body: JSON.stringify({ amount }),
+    }),
+
+  checkPaymentStatus: (paymentId: string) =>
+    request<{ status: 'pending' | 'completed' | 'failed' | 'cancelled' | 'declined' }>(`/topup/status/${paymentId}`),
+
+  // ── QR to'lov parse ───────────────────────────────────────────────────
+  parseQR: (qrData: string) =>
+    request<{ merchant_id: string; merchant_name: string; amount?: number }>('/qr/parse', {
+      method: 'POST',
+      body: JSON.stringify({ qr_data: qrData }),
+    }),
 };
