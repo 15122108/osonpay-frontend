@@ -6,7 +6,7 @@ import * as SecureStore from 'expo-secure-store';
 import { router } from 'expo-router';
 import { AuthContext, useAuthProvider } from '../hooks/useAuth';
 import { LangProvider } from '../hooks/useLang';
-import { KEYS } from '../constants/keys';
+import { KEYS } from '../constants/theme';
 import { C } from '../constants/theme';
 
 // Root layout — AuthProvider + LangProvider barcha ekranlarni o'raydi
