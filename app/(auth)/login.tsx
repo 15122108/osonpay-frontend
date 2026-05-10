@@ -1,4 +1,11 @@
 // app/(auth)/login.tsx
+// Foydalanuvchi ro'yxatdan o'tganda yoki kirganida:
+// 1. Telefon raqami kiritiladi
+// 2. SMS kod tasdiqlanadi
+// 3. Yangi foydalanuvchi bo'lsa — ism kiritiladi
+// 4. User ma'lumotlari auth context ga saqlanadi
+// 5. PIN ekraniga yo'naltiriladi
+
 import React, { useState, useRef, useEffect } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
@@ -9,23 +16,28 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
 import { C, S, R } from '../../constants/theme';
+import { KEYS } from '../../constants/keys';
 import { api } from '../../services/api';
+import { useAuth } from '../../hooks/useAuth';
 import { useLang } from '../../hooks/useLang';
-import { KEYS } from '../_layout';
 
 type Step = 'phone' | 'code' | 'name';
 
 export default function Login() {
-  const { t } = useLang();
+  const { t }       = useLang();
+  const { saveUser } = useAuth();  // ← user ni auth context ga saqlash
+
   const [step, setStep]       = useState<Step>('phone');
   const [phone, setPhone]     = useState('');
   const [code, setCode]       = useState('');
   const [name, setName]       = useState('');
   const [loading, setLoading] = useState(false);
   const [timer, setTimer]     = useState(0);
-  const timerRef              = useRef<ReturnType<typeof setInterval> | null>(null);
-  const fadeAnim              = useRef(new Animated.Value(0)).current;
-  const codeInputRef          = useRef<TextInput>(null);
+  const [verifiedUser, setVerifiedUser] = useState<any>(null); // token kelgandan keyin saqlash
+
+  const timerRef     = useRef<ReturnType<typeof setInterval> | null>(null);
+  const fadeAnim     = useRef(new Animated.Value(1)).current;
+  const codeInputRef = useRef<TextInput>(null);
 
   useEffect(() => {
     Animated.timing(fadeAnim, { toValue: 1, duration: 400, useNativeDriver: true }).start();
@@ -38,14 +50,14 @@ export default function Login() {
   function startTimer() {
     setTimer(60);
     timerRef.current = setInterval(() => {
-      setTimer(t => {
-        if (t <= 1) { clearInterval(timerRef.current!); return 0; }
-        return t - 1;
+      setTimer(prev => {
+        if (prev <= 1) { clearInterval(timerRef.current!); return 0; }
+        return prev - 1;
       });
     }, 1000);
   }
 
-  // Telefon formatlash
+  // Telefon raqamini formatlash
   const digits = phone.replace(/\D/g, '');
   function dispPhone(d = digits.slice(0, 12)) {
     if (!d) return '';
@@ -56,6 +68,7 @@ export default function Login() {
     return `+${d.slice(0,3)} ${d.slice(3,5)} ${d.slice(5,8)} ${d.slice(8,10)} ${d.slice(10,12)}`;
   }
 
+  // 1-bosqich: SMS yuborish
   async function sendCode() {
     if (digits.length < 12) {
       Alert.alert(t('error'), t('enterPhone')); return;
@@ -72,6 +85,7 @@ export default function Login() {
     } finally { setLoading(false); }
   }
 
+  // 2-bosqich: SMS kodni tasdiqlash
   async function verifyCode() {
     if (code.length < 4) {
       Alert.alert(t('error'), t('enterCode')); return;
@@ -79,27 +93,42 @@ export default function Login() {
     setLoading(true);
     try {
       const res = await api.verifyCode(`+${digits}`, code);
+
+      // Token ni saqlash
       await SecureStore.setItemAsync(KEYS.TOKEN, res.token);
 
-      if (!res.user?.fullName) {
-        // Yangi foydalanuvchi — ism kiriting
-        fadeAnim.setValue(0);
-        setStep('name');
-      } else {
-        // Mavjud foydalanuvchi — PIN yaratish yoki asosiy ekran
+      if (res.user?.fullName) {
+        // Mavjud foydalanuvchi — ismi bor
+        // Auth context ga saqlaymiz
+        saveUser(res.user);
+        // PIN bor bo'lsa pin-lock, yo'q bo'lsa create-pin
         const pin = await SecureStore.getItemAsync(KEYS.PIN);
         router.replace(pin ? '/(auth)/pin-lock' : '/(auth)/create-pin');
+      } else {
+        // Yangi foydalanuvchi — ismi yo'q, kiritishni so'raymiz
+        setVerifiedUser(res.user);
+        fadeAnim.setValue(0);
+        setStep('name');
       }
     } catch (e: any) {
       Alert.alert(t('error'), e.message);
     } finally { setLoading(false); }
   }
 
+  // 3-bosqich: Ism saqlash (yangi foydalanuvchi)
   async function saveName() {
-    if (!name.trim()) { Alert.alert(t('error'), t('enterName')); return; }
+    if (!name.trim()) {
+      Alert.alert(t('error'), t('enterName')); return;
+    }
     setLoading(true);
     try {
-      await api.updateProfile({ fullName: name.trim() });
+      // Backendga ismni saqlash
+      const updatedUser = await api.updateProfile({ fullName: name.trim() });
+
+      // Auth context ga yangilangan user ni saqlash
+      saveUser({ ...verifiedUser, fullName: name.trim(), ...updatedUser });
+
+      // PIN yaratish ekraniga o'tish
       router.replace('/(auth)/create-pin');
     } catch (e: any) {
       Alert.alert(t('error'), e.message);
@@ -112,6 +141,7 @@ export default function Login() {
     try {
       await api.sendCode(`+${digits}`);
       startTimer();
+      setCode('');
     } catch (e: any) {
       Alert.alert(t('error'), e.message);
     } finally { setLoading(false); }
@@ -119,7 +149,10 @@ export default function Login() {
 
   return (
     <SafeAreaView style={s.root}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={{ flex: 1 }}
+      >
         <View style={s.inner}>
 
           {/* Logo */}
@@ -132,7 +165,7 @@ export default function Login() {
 
           <Animated.View style={[s.card, { opacity: fadeAnim }]}>
 
-            {/* ── PHONE ─────────────────────────────────────────────── */}
+            {/* ── 1-bosqich: Telefon ─────────────────────────── */}
             {step === 'phone' && (
               <>
                 <Text style={s.stepTitle}>{t('welcome')} 👋</Text>
@@ -151,7 +184,7 @@ export default function Login() {
                   />
                 </View>
                 <TouchableOpacity
-                  style={[s.btnWrap, digits.length < 12 && { opacity: 0.4 }]}
+                  style={[s.btnWrap, (digits.length < 12 || loading) && { opacity: 0.4 }]}
                   disabled={digits.length < 12 || loading}
                   onPress={sendCode}
                   activeOpacity={0.8}
@@ -166,15 +199,19 @@ export default function Login() {
               </>
             )}
 
-            {/* ── CODE ──────────────────────────────────────────────── */}
+            {/* ── 2-bosqich: SMS kod ─────────────────────────── */}
             {step === 'code' && (
               <>
-                <TouchableOpacity onPress={() => setStep('phone')} hitSlop={8} style={s.backBtn}>
+                <TouchableOpacity
+                  onPress={() => { setStep('phone'); setCode(''); }}
+                  hitSlop={8}
+                  style={s.backBtn}
+                >
                   <Text style={s.backTxt}>← {dispPhone()}</Text>
                 </TouchableOpacity>
                 <Text style={s.stepTitle}>{t('enterCode')}</Text>
                 <Text style={s.stepSub}>
-                  {dispPhone()} raqamiga SMS yuborildi
+                  {dispPhone()} ga SMS yuborildi
                 </Text>
                 <TextInput
                   ref={codeInputRef}
@@ -183,6 +220,7 @@ export default function Login() {
                   onChangeText={v => {
                     const clean = v.replace(/\D/g, '').slice(0, 6);
                     setCode(clean);
+                    // 6 raqam to'liq kirilganda avtomatik tasdiqlash
                     if (clean.length === 6) setTimeout(() => verifyCode(), 100);
                   }}
                   keyboardType="numeric"
@@ -193,11 +231,14 @@ export default function Login() {
                 />
                 <TouchableOpacity onPress={resendCode} disabled={timer > 0}>
                   <Text style={[s.resendTxt, timer > 0 && { color: C.t3 }]}>
-                    {timer > 0 ? `Qayta yuborish: ${timer}s` : 'Qayta yuborish'}
+                    {timer > 0
+                      ? `Qayta yuborish: ${timer}s`
+                      : 'Qayta yuborish'
+                    }
                   </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={[s.btnWrap, code.length < 4 && { opacity: 0.4 }]}
+                  style={[s.btnWrap, (code.length < 4 || loading) && { opacity: 0.4 }]}
                   disabled={code.length < 4 || loading}
                   onPress={verifyCode}
                   activeOpacity={0.8}
@@ -212,11 +253,13 @@ export default function Login() {
               </>
             )}
 
-            {/* ── NAME ──────────────────────────────────────────────── */}
+            {/* ── 3-bosqich: Ism (yangi foydalanuvchi) ─────────── */}
             {step === 'name' && (
               <>
                 <Text style={s.stepTitle}>{t('enterName')} 👤</Text>
-                <Text style={s.stepSub}>Ismingizni kiriting</Text>
+                <Text style={s.stepSub}>
+                  Bu ism ilovada va to'lovlarda ko'rinadi
+                </Text>
                 <TextInput
                   style={[s.input, s.nameInput]}
                   value={name}
@@ -225,9 +268,11 @@ export default function Login() {
                   placeholderTextColor={C.t3}
                   autoCapitalize="words"
                   autoFocus
+                  returnKeyType="done"
+                  onSubmitEditing={saveName}
                 />
                 <TouchableOpacity
-                  style={[s.btnWrap, !name.trim() && { opacity: 0.4 }]}
+                  style={[s.btnWrap, (!name.trim() || loading) && { opacity: 0.4 }]}
                   disabled={!name.trim() || loading}
                   onPress={saveName}
                   activeOpacity={0.8}
@@ -241,6 +286,7 @@ export default function Login() {
                 </TouchableOpacity>
               </>
             )}
+
           </Animated.View>
         </View>
       </KeyboardAvoidingView>
@@ -253,7 +299,7 @@ const s = StyleSheet.create({
   inner:     { flex: 1, justifyContent: 'center', paddingHorizontal: S.lg, gap: S.xl },
   logoWrap:  { alignItems: 'center', gap: S.sm },
   logoBox:   { width: 80, height: 80, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
-  logoTxt:   { fontSize: 32, fontWeight: '900', color: '#FFF' },
+  logoTxt:   { fontSize: 36, fontWeight: '900', color: '#FFF' },
   appName:   { fontSize: 22, fontWeight: '900', color: C.t1, letterSpacing: 2 },
   card:      { backgroundColor: C.elevated, borderRadius: R.xl, padding: S.lg, borderWidth: 1, borderColor: C.border, gap: S.md },
   backBtn:   { marginBottom: -S.sm },
@@ -263,8 +309,8 @@ const s = StyleSheet.create({
   inputBox:  { flexDirection: 'row', alignItems: 'center', gap: S.sm, backgroundColor: C.card, borderRadius: R.lg, borderWidth: 1.5, borderColor: C.border, paddingHorizontal: S.md, height: 56 },
   flag:      { fontSize: 22 },
   input:     { flex: 1, fontSize: 18, fontWeight: '600', color: C.t1 },
-  codeInput: { backgroundColor: C.card, borderRadius: R.lg, borderWidth: 1.5, borderColor: C.border, paddingHorizontal: S.md, height: 60, textAlign: 'center', fontSize: 24, letterSpacing: 8 },
-  nameInput: { backgroundColor: C.card, borderRadius: R.lg, borderWidth: 1.5, borderColor: C.border, paddingHorizontal: S.md, height: 56, fontSize: 18 },
+  codeInput: { flex: undefined, backgroundColor: C.card, borderRadius: R.lg, borderWidth: 1.5, borderColor: C.border, paddingHorizontal: S.md, height: 60, textAlign: 'center', fontSize: 24, letterSpacing: 8, color: C.t1 },
+  nameInput: { flex: undefined, backgroundColor: C.card, borderRadius: R.lg, borderWidth: 1.5, borderColor: C.border, paddingHorizontal: S.md, height: 56, fontSize: 18, color: C.t1 },
   resendTxt: { color: C.primaryLight, fontSize: 14, fontWeight: '600', textAlign: 'center' },
   btnWrap:   { borderRadius: R.xl, overflow: 'hidden', marginTop: S.sm },
   btn:       { height: 56, alignItems: 'center', justifyContent: 'center' },
