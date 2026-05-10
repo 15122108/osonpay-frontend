@@ -1,25 +1,25 @@
 // app/_layout.tsx
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { Stack } from 'expo-router';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
-import * as LocalAuthentication from 'expo-local-authentication';
 import { router } from 'expo-router';
+import { AuthContext, useAuthProvider } from '../hooks/useAuth';
+import { LangProvider } from '../hooks/useLang';
+import { KEYS } from '../constants/keys';
 import { C } from '../constants/theme';
 
-// Kalitlar
-export const KEYS = {
-  PIN: 'app_pin',
-  TOKEN: 'app_token',
-  BIO: 'app_bio',
-};
+// Root layout — AuthProvider + LangProvider barcha ekranlarni o'raydi
+// Shunday qilib useAuth() va useLang() hamma joyda ishlaydi
 
-export default function RootLayout() {
-  const [checking, setChecking] = useState(true);
+function RootLayoutNav() {
+  const auth = useAuthProvider();
 
   useEffect(() => {
-    checkAuth();
-  }, []);
+    if (!auth.loading) {
+      checkAuth();
+    }
+  }, [auth.loading]);
 
   async function checkAuth() {
     try {
@@ -29,27 +29,20 @@ export default function RootLayout() {
       ]);
 
       if (!token) {
-        // Hech qachon login qilmagan → login ekrani
         router.replace('/(auth)/login');
         return;
       }
-
       if (!pin) {
-        // Token bor, lekin PIN yo'q → PIN yaratish
         router.replace('/(auth)/create-pin');
         return;
       }
-
-      // Token ham, PIN ham bor → PIN/FaceID so'rash
       router.replace('/(auth)/pin-lock');
     } catch {
       router.replace('/(auth)/login');
-    } finally {
-      setChecking(false);
     }
   }
 
-  if (checking) {
+  if (auth.loading) {
     return (
       <View style={s.splash}>
         <ActivityIndicator color={C.primary} size="large" />
@@ -58,14 +51,30 @@ export default function RootLayout() {
   }
 
   return (
-    <Stack screenOptions={{ headerShown: false, animation: 'fade' }}>
-      <Stack.Screen name="(auth)" />
-      <Stack.Screen name="(tabs)" />
-      <Stack.Screen name="modals" options={{ presentation: 'modal' }} />
-    </Stack>
+    <AuthContext.Provider value={auth}>
+      <Stack screenOptions={{ headerShown: false, animation: 'fade' }}>
+        <Stack.Screen name="(auth)" />
+        <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="modals" options={{ presentation: 'modal' }} />
+      </Stack>
+    </AuthContext.Provider>
+  );
+}
+
+export default function RootLayout() {
+  // LangProvider eng tashqarida — til hamma joyda ishlaydi
+  return (
+    <LangProvider>
+      <RootLayoutNav />
+    </LangProvider>
   );
 }
 
 const s = StyleSheet.create({
-  splash: { flex: 1, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center' },
+  splash: {
+    flex: 1,
+    backgroundColor: C.bg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 });
