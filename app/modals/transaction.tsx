@@ -1,7 +1,7 @@
 // app/modals/transaction.tsx
 import React, { useState, useEffect } from 'react';
 import {
-  View, Text, TouchableOpacity, StyleSheet,
+  View, Text, TouchableOpacity, StyleSheet, Platform,
   SafeAreaView, ActivityIndicator, Alert, Share, ScrollView,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -171,6 +171,3 @@ const s = StyleSheet.create({
   empty:       { alignItems: 'center', paddingTop: 80, gap: S.md },
   emptyTxt:    { color: C.t3, fontSize: 16 },
 });
-
-// Platform import
-import { Platform } from 'react-native';
