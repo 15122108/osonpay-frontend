@@ -16,7 +16,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
 import { C, S, R } from '../../constants/theme';
-import { KEYS } from '../../constants/keys';
+import { KEYS } from '../../constants/theme';
 import { api } from '../../services/api';
 import { useAuth } from '../../hooks/useAuth';
 import { useLang } from '../../hooks/useLang';
