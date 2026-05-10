@@ -1,10 +1,10 @@
 // hooks/useAuth.ts
-import { useState, useEffect, createContext, useContext } from 'react';
+import React, { useState, useEffect, createContext, useContext } from 'react';
 import * as SecureStore from 'expo-secure-store';
 import { api } from '../services/api';
-import { KEYS } from '../app/_layout';
+import { KEYS } from '../constants/keys';
 
-interface User {
+export interface User {
   id: string;
   fullName: string;
   phone: string;
@@ -18,6 +18,7 @@ interface AuthCtx {
   login: (phone: string, code: string) => Promise<void>;
   logout: () => Promise<void>;
   refresh: () => Promise<void>;
+  setUser: (u: User | null) => void;
 }
 
 export const AuthContext = createContext<AuthCtx>({
@@ -26,19 +27,20 @@ export const AuthContext = createContext<AuthCtx>({
   login: async () => {},
   logout: async () => {},
   refresh: async () => {},
+  setUser: () => {},
 });
 
+// Istalgan komponentda: const { user } = useAuth();
 export function useAuth() {
   return useContext(AuthContext);
 }
 
+// Faqat _layout.tsx da ishlatiladi
 export function useAuthProvider(): AuthCtx {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser]       = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    loadUser();
-  }, []);
+  useEffect(() => { loadUser(); }, []);
 
   async function loadUser() {
     try {
@@ -47,7 +49,6 @@ export function useAuthProvider(): AuthCtx {
       const data = await api.getProfile();
       setUser(data);
     } catch {
-      // Token muddati o'tgan — o'chirish
       await SecureStore.deleteItemAsync(KEYS.TOKEN);
     } finally {
       setLoading(false);
@@ -55,15 +56,17 @@ export function useAuthProvider(): AuthCtx {
   }
 
   async function login(phone: string, code: string) {
-    const { token, user: u } = await api.login(phone, code);
+    const { token, user: u } = await api.verifyCode(phone, code);
     await SecureStore.setItemAsync(KEYS.TOKEN, token);
     setUser(u);
   }
 
   async function logout() {
-    await SecureStore.deleteItemAsync(KEYS.TOKEN);
-    await SecureStore.deleteItemAsync(KEYS.PIN);
-    await SecureStore.deleteItemAsync(KEYS.BIO);
+    await Promise.all([
+      SecureStore.deleteItemAsync(KEYS.TOKEN),
+      SecureStore.deleteItemAsync(KEYS.PIN),
+      SecureStore.deleteItemAsync(KEYS.BIO),
+    ]);
     setUser(null);
     try { await api.logout(); } catch {}
   }
@@ -75,5 +78,5 @@ export function useAuthProvider(): AuthCtx {
     } catch {}
   }
 
-  return { user, loading, login, logout, refresh };
+  return { user, loading, login, logout, refresh, setUser };
 }
