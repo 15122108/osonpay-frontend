@@ -12,7 +12,7 @@ import * as LocalAuthentication from 'expo-local-authentication';
 import * as SecureStore from 'expo-secure-store';
 import { router } from 'expo-router';
 import { C, S, R } from '../../constants/theme';
-import { KEYS } from '../_layout';
+import { KEYS } from '../../constants/keys';
 
 const PIN_LENGTH = 4;
 type Step = 'enter' | 'confirm' | 'bio';
