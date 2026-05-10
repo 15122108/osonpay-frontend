@@ -3,6 +3,7 @@
 // muvaffaqiyatsiz bo'lsa PIN klaviatura chiqadi.
 
 import React, { useState, useEffect, useRef } from 'react';
+import { useAuth } from '../../hooks/useAuth';
 import {
   View, Text, TouchableOpacity, StyleSheet,
   SafeAreaView, Animated, Vibration, Alert, Image,
@@ -11,11 +12,12 @@ import * as LocalAuthentication from 'expo-local-authentication';
 import * as SecureStore from 'expo-secure-store';
 import { router } from 'expo-router';
 import { C, S, R } from '../../constants/theme';
-import { KEYS } from '../_layout';
+import { KEYS } from '../../constants/keys';
 
 const PIN_LENGTH = 4;
 
 export default function PinLock() {
+  const { user } = useAuth();
   const [pin, setPin] = useState('');
   const [bioAvailable, setBioAvailable] = useState(false);
   const [bioType, setBioType] = useState<'face' | 'fingerprint' | null>(null);
@@ -138,6 +140,7 @@ export default function PinLock() {
         </View>
 
         <Text style={s.title}>PIN-kodni kiriting</Text>
+        {user?.fullName ? <Text style={s.subtitle}>{user.fullName}</Text> : null}
 
         {/* Dots */}
         <Animated.View style={[s.dots, { transform: [{ translateX: shakeAnim }] }]}>
@@ -248,4 +251,5 @@ const s = StyleSheet.create({
   delIcon: { fontSize: 22, color: C.t2 },
   logoutBtn: { alignItems: 'center', paddingBottom: 30, paddingTop: 8 },
   logoutTxt: { color: C.t3, fontSize: 14 },
+  subtitle: { fontSize: 14, color: C.t2, fontWeight: '600' },
 });
