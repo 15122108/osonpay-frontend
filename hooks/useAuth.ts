@@ -2,7 +2,7 @@
 import React, { useState, useEffect, createContext, useContext } from 'react';
 import * as SecureStore from 'expo-secure-store';
 import { api } from '../services/api';
-import { KEYS } from '../constants/keys';
+import { KEYS } from '../constants/theme';
 
 export interface User {
   id: string;
