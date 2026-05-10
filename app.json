@@ -17,6 +17,9 @@
       "bundleIdentifier": "uz.osonpay.app",
       "infoPlist": {
         "NSFaceIDUsageDescription": "Tezkor kirish uchun Face ID ishlatiladi"
+      },
+      "runtimeVersion": {
+        "policy": "appVersion"
       }
     },
     "android": {
@@ -29,13 +32,18 @@
       "permissions": [
         "android.permission.USE_BIOMETRIC",
         "android.permission.USE_FINGERPRINT",
+        "android.permission.VIBRATE",
+        "android.permission.USE_BIOMETRIC",
+        "android.permission.USE_FINGERPRINT",
         "android.permission.VIBRATE"
-      ]
+      ],
+      "runtimeVersion": "1.0.0"
     },
     "plugins": [
       "expo-router",
       "expo-font",
-      "expo-local-authentication"
+      "expo-local-authentication",
+      "expo-secure-store"
     ],
     "experiments": {
       "typedRoutes": true
@@ -48,6 +56,9 @@
         "projectId": "9c059d6b-ccfb-4baf-be46-b8bcdef54dda"
       }
     },
-    "owner": "farhod1512"
+    "owner": "farhod1512",
+    "updates": {
+      "url": "https://u.expo.dev/9c059d6b-ccfb-4baf-be46-b8bcdef54dda"
+    }
   }
 }

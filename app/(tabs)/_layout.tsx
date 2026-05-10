@@ -1,79 +1,63 @@
-import { useEffect, useRef } from 'react';
-import { Stack, router, usePathname } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
-import * as SplashScreen from 'expo-splash-screen';
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { StyleSheet, AppState } from 'react-native';
-import { AuthProvider, useAuth } from '../../hooks/useAuth';
-import { LangProvider } from '../../hooks/useLang';
+// app/(tabs)/_layout.tsx
+// Mavjud fayllar: index.tsx, cards.tsx, history.tsx, profile.tsx
+// Hech narsa o'zgarmaydi — faqat shu fayl qo'shiladi
 
-SplashScreen.preventAutoHideAsync();
+import { Tabs } from 'expo-router';
+import { Text, View, StyleSheet } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { C } from '../../constants/theme';
 
-function Nav() {
-  const { loading, isLoggedIn, user } = useAuth();
-  const appState = useRef(AppState.currentState);
-  const pathname = usePathname();
-
-  useEffect(() => {
-    const sub = AppState.addEventListener('change', nextState => {
-      if (
-        appState.current.match(/inactive|background/) &&
-        nextState === 'active' &&
-        isLoggedIn &&
-        user?.hasPin &&
-        pathname !== '/(auth)/pin-lock'
-      ) {
-        router.replace('/(auth)/pin-lock');
-      }
-      appState.current = nextState;
-    });
-    return () => sub.remove();
-  }, [isLoggedIn, user?.hasPin, pathname]);
-
-  useEffect(() => {
-    if (loading) return;
-    SplashScreen.hideAsync();
-
-    if (!isLoggedIn) {
-      router.replace('/(auth)/login');
-    } else if (!user?.hasPin) {
-      router.replace('/(auth)/create-pin');
-    } else {
-      router.replace('/(auth)/pin-lock');
-    }
-  }, [loading, isLoggedIn, user?.hasPin]);
-
+function TabIcon({ icon, label, focused }: { icon: string; label: string; focused: boolean }) {
   return (
-    <Stack screenOptions={{
-      headerShown: false,
-      contentStyle: { backgroundColor: '#0D0A14' },
-      animation: 'slide_from_right',
-    }}>
-      <Stack.Screen name="(auth)/login" />
-      <Stack.Screen name="(auth)/create-pin" />
-      <Stack.Screen name="(auth)/pin-lock" options={{ gestureEnabled: false }} />
-      <Stack.Screen name="(tabs)" />
-      <Stack.Screen name="modals/send"        options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
-      <Stack.Screen name="modals/receive"     options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
-      <Stack.Screen name="modals/topup"       options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
-      <Stack.Screen name="modals/transaction" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
-      <Stack.Screen name="modals/addcard"     options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
-      <Stack.Screen name="modals/kyc"         options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
-    </Stack>
+    <View style={ti.wrap}>
+      <Text style={[ti.icon, focused && ti.iconOn]}>{icon}</Text>
+      <Text style={[ti.label, focused && ti.labelOn]}>{label}</Text>
+    </View>
   );
 }
 
-export default function Root() {
+const ti = StyleSheet.create({
+  wrap:    { alignItems: 'center', gap: 2, paddingTop: 6 },
+  icon:    { fontSize: 22, opacity: 0.4 },
+  iconOn:  { opacity: 1 },
+  label:   { fontSize: 10, color: C.t3, fontWeight: '500' },
+  labelOn: { color: C.primaryLight, fontWeight: '700' },
+});
+
+export default function TabLayout() {
+  const insets = useSafeAreaInsets();
+
   return (
-    <AuthProvider>
-      <LangProvider>
-        <GestureHandlerRootView style={s.root}>
-          <StatusBar style="light" backgroundColor="#0D0A14" />
-          <Nav />
-        </GestureHandlerRootView>
-      </LangProvider>
-    </AuthProvider>
+    <Tabs
+      screenOptions={{
+        headerShown: false,
+        tabBarShowLabel: false,
+        tabBarStyle: {
+          backgroundColor: C.surface,
+          borderTopColor: C.border,
+          borderTopWidth: 0.5,
+          height: 56 + insets.bottom,
+          paddingBottom: insets.bottom || 8,
+          elevation: 0,
+        },
+      }}
+    >
+      <Tabs.Screen
+        name="index"
+        options={{ tabBarIcon: ({ focused }) => <TabIcon icon="🏠" label="Asosiy" focused={focused} /> }}
+      />
+      <Tabs.Screen
+        name="cards"
+        options={{ tabBarIcon: ({ focused }) => <TabIcon icon="💳" label="Kartalar" focused={focused} /> }}
+      />
+      <Tabs.Screen
+        name="history"
+        options={{ tabBarIcon: ({ focused }) => <TabIcon icon="🕐" label="Kirim-chiqim" focused={focused} /> }}
+      />
+      <Tabs.Screen
+        name="profile"
+        options={{ tabBarIcon: ({ focused }) => <TabIcon icon="👤" label="Profil" focused={focused} /> }}
+      />
+    </Tabs>
   );
 }
-
-const s = StyleSheet.create({ root: { flex: 1 } });
