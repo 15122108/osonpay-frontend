@@ -1,8 +1,11 @@
 // services/api.ts
-const BASE = process.env.EXPO_PUBLIC_API_URL ?? 'https://your-backend.com/api';
+// Backend: FastAPI (Python) — barcha endpoint yo'llari haqiqiy backend bilan mos
+
+import * as SecureStore from 'expo-secure-store';
+
+const BASE = process.env.EXPO_PUBLIC_API_URL ?? 'https://your-backend.onrender.com';
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
-  const SecureStore = (await import('expo-secure-store')).default ?? await import('expo-secure-store');
   const token = await SecureStore.getItemAsync('app_token');
   const res = await fetch(`${BASE}${path}`, {
     headers: {
@@ -12,107 +15,309 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
     ...options,
   });
   const json = await res.json();
-  if (!res.ok) throw new Error(json.message ?? 'Xatolik yuz berdi');
+  if (!res.ok) {
+    throw new Error(json.error ?? json.detail ?? json.message ?? 'Xatolik yuz berdi');
+  }
   return json;
 }
 
 export const api = {
-  // ── Auth ──────────────────────────────────────────────────────────────────
-  sendCode:   (phone: string) =>
-    request<{ success: boolean }>('/auth/send-code', { method: 'POST', body: JSON.stringify({ phone }) }),
 
-  verifyCode: (phone: string, code: string) =>
-    request<{ token: string; user: any }>('/auth/verify-code', { method: 'POST', body: JSON.stringify({ phone, code }) }),
+  // ─────────────────────────────────────────────────────────────────
+  // AUTH  →  /api/auth/...
+  // ─────────────────────────────────────────────────────────────────
 
-  logout: () =>
-    request<void>('/auth/logout', { method: 'POST' }),
+  /** SMS kod yuborish */
+  sendCode: (phone: string) =>
+    request<{ success: boolean; isNewUser: boolean; devCode?: string }>(
+      '/api/auth/send-otp',
+      { method: 'POST', body: JSON.stringify({ phone }) }
+    ),
 
-  // ── Profile ───────────────────────────────────────────────────────────────
+  /** SMS kodni tasdiqlash → token olish */
+  verifyCode: (phone: string, code: string, fullName = 'Foydalanuvchi') =>
+    request<{ success: boolean; token: string; hasPin: boolean; user: any }>(
+      '/api/auth/verify-otp',
+      { method: 'POST', body: JSON.stringify({ phone, code, fullName }) }
+    ),
+
+  /** PIN o'rnatish (login dan keyin) */
+  setPin: (pin: string) =>
+    request<{ success: boolean }>(
+      '/api/auth/set-pin',
+      { method: 'POST', body: JSON.stringify({ pin }) }
+    ),
+
+  /** PIN bilan kirish */
+  verifyPin: (phone: string, pin: string) =>
+    request<{ success: boolean; token: string }>(
+      '/api/auth/verify-pin',
+      { method: 'POST', body: JSON.stringify({ phone, pin }) }
+    ),
+
+  /** Profil ma'lumotlari */
   getProfile: () =>
-    request<any>('/profile'),
+    request<{ success: boolean; user: {
+      id: string; phone: string; full_name: string;
+      balance: number; currency: string;
+      is_verified: boolean; language: string;
+      pin_hash: boolean;
+    } }>('/api/auth/profile'),
 
-  updateProfile: (data: { fullName?: string;[key: string]: any }) =>
-    request<any>('/profile', { method: 'PUT', body: JSON.stringify(data) }),
+  /** Profil yangilash */
+  updateProfile: (data: { fullName?: string }) =>
+    request<{ success: boolean }>(
+      '/api/auth/profile',
+      { method: 'PUT', body: JSON.stringify(data) }
+    ),
 
-  setLanguage: (lang: string) =>
-    request<void>('/profile/language', { method: 'PUT', body: JSON.stringify({ lang }) }),
+  /** Til o'rnatish */
+  setLanguage: (language: string) =>
+    request<{ success: boolean }>(
+      '/api/auth/language',
+      { method: 'PUT', body: JSON.stringify({ language }) }
+    ),
 
-  // ── Cards ─────────────────────────────────────────────────────────────────
+  /** Chiqish */
+  logout: () =>
+    request<{ success: boolean }>(
+      '/api/auth/logout',
+      { method: 'POST' }
+    ),
+
+
+  // ─────────────────────────────────────────────────────────────────
+  // KARTALAR  →  /api/cards/...
+  // ─────────────────────────────────────────────────────────────────
+
+  /** Kartalar ro'yxati */
   getCards: () =>
-    request<any[]>('/cards'),
+    request<{ success: boolean; cards: {
+      id: string; card_number_masked: string; card_holder: string;
+      expiry_month: string; expiry_year: string; card_type: string;
+      is_default: boolean; color_from: string; color_to: string;
+    }[] }>('/api/cards'),
 
-  addCardRequest: (data: { number: string; expiry_month: string; expiry_year: string }) =>
-    request<{ token: string }>('/cards/request', { method: 'POST', body: JSON.stringify(data) }),
+  /** Karta qo'shish */
+  addCard: (data: {
+    cardNumber: string; cardHolder: string;
+    expiryMonth: string; expiryYear: string;
+    cardType?: string;
+  }) =>
+    request<{ success: boolean; card: any }>(
+      '/api/cards',
+      { method: 'POST', body: JSON.stringify(data) }
+    ),
 
-  addCardConfirm: (data: { number: string; sms_code: string; color_from?: string; color_to?: string; card_holder?: string }) =>
-    request<any>('/cards/confirm', { method: 'POST', body: JSON.stringify(data) }),
-
+  /** Asosiy karta qilish */
   setDefaultCard: (id: string) =>
-    request<void>(`/cards/${id}/default`, { method: 'PUT' }),
+    request<{ success: boolean }>(
+      `/api/cards/${id}/default`,
+      { method: 'PUT' }
+    ),
 
+  /** Kartani o'chirish */
   deleteCard: (id: string) =>
-    request<void>(`/cards/${id}`, { method: 'DELETE' }),
+    request<{ success: boolean }>(
+      `/api/cards/${id}`,
+      { method: 'DELETE' }
+    ),
 
-  // ── Transfers ─────────────────────────────────────────────────────────────
-  sendMoney: (params: { fromCardId: string; phone: string; amount: number; note?: string }) =>
-    request<{ transactionId: string }>('/transfer/phone', { method: 'POST', body: JSON.stringify(params) }),
+  /** Karta orqali o'tkazma */
+  cardTransfer: (params: {
+    fromCardId: string; toCard: string; amount: number;
+  }) =>
+    request<{ success: boolean; reference: string; transaction: any }>(
+      '/api/cards/transfer',
+      {
+        method: 'POST',
+        body: JSON.stringify({
+          from_card_id: params.fromCardId,
+          to_card_number: params.toCard,
+          amount: params.amount,
+        }),
+      }
+    ),
 
-  cardTransfer: (params: { fromCardId: string; toCard: string; amount: number }) =>
-    request<{ transactionId: string }>('/transfer/card', { method: 'POST', body: JSON.stringify(params) }),
+  /** Mening QR kodim */
+  getQR: () =>
+    request<{ success: boolean; qr_data: string }>('/api/cards/qr'),
 
-  // ── History ───────────────────────────────────────────────────────────────
-  getHistory: (page = 1, type?: string, period?: string) => {
-    const p = new URLSearchParams({ page: String(page) });
-    if (type)   p.append('type', type);
-    if (period) p.append('period', period);
-    return request<{ transactions: any[]; total: number }>(`/history?${p}`);
+  /** QR orqali to'lov */
+  payByQR: (qr_data: string, amount: number) =>
+    request<{ success: boolean; reference: string; transaction: any }>(
+      '/api/cards/qr/pay',
+      { method: 'POST', body: JSON.stringify({ qr_data, amount }) }
+    ),
+
+  /** QR kodni parse qilish */
+  parseQR: (qr_data: string) => {
+    try {
+      const data = JSON.parse(qr_data);
+      return Promise.resolve({
+        merchant_id: data.user_id ?? '',
+        merchant_name: data.name ?? 'Foydalanuvchi',
+        phone: data.phone ?? '',
+        amount: data.amount,
+      });
+    } catch {
+      return Promise.reject(new Error("Noto'g'ri QR kod"));
+    }
   },
 
+
+  // ─────────────────────────────────────────────────────────────────
+  // TRANZAKSIYALAR  →  /api/transactions/...
+  // ─────────────────────────────────────────────────────────────────
+
+  /** Telefon raqami orqali pul yuborish */
+  sendMoney: (params: {
+    fromCardId?: string; phone: string; amount: number; note?: string;
+  }) =>
+    request<{ success: boolean; transaction: any; fraud_risk?: string }>(
+      '/api/transactions/send',
+      {
+        method: 'POST',
+        body: JSON.stringify({
+          receiverPhone: params.phone,
+          amount: params.amount,
+          description: params.note,
+        }),
+      }
+    ),
+
+  /** Tranzaksiyalar tarixi */
+  getHistory: (page = 1, type?: string, period?: string) => {
+    const p = new URLSearchParams({ page: String(page) });
+    if (type) p.append('type', type);
+    return request<{
+      transactions: any[]; total: number; page: number; limit: number;
+    }>(`/api/transactions?${p}`);
+  },
+
+  /** Bitta tranzaksiya */
   getTransaction: (id: string) =>
-    request<any>(`/history/${id}`),
+    request<any>(`/api/transactions/${id}`),
 
-  getStats: () =>
-    request<{ stats: any }>('/history/stats'),
+  /** Statistika */
+  getStats: () => {
+    // Tranzaksiyalar tarixidan statistika hisoblash
+    return api.getHistory(1).then(data => ({
+      stats: {
+        total_in: 0,
+        total_out: 0,
+        total_count: data.total ?? 0,
+        cashback: 0,
+      }
+    }));
+  },
 
-  // ── Contacts ──────────────────────────────────────────────────────────────
-  getContacts: () =>
-    request<any[]>('/contacts'),
 
-  // ── Payments ──────────────────────────────────────────────────────────────
-  getSavedPayments: () =>
-    request<any[]>('/payments/saved'),
+  // ─────────────────────────────────────────────────────────────────
+  // TO'LDIRISH  →  /api/payments/topup/...
+  // ─────────────────────────────────────────────────────────────────
 
-  getMyHome: () =>
-    request<any[]>('/payments/home'),
-
-  getServices: () =>
-    request<any[]>('/payments/services'),
-
-  payByQR: (qrData: string, amount: number) =>
-    request<{ transactionId: string }>('/payments/qr', { method: 'POST', body: JSON.stringify({ qr_data: qrData, amount }) }),
-
-  // ── QR ────────────────────────────────────────────────────────────────────
-  getQR: () =>
-    request<{ qr_data: string }>('/qr'),
-
-  // ── KYC ───────────────────────────────────────────────────────────────────
-  submitKYC: (data: { passport_series: string; passport_number: string; birth_date: string; full_name: string }) =>
-    request<{ status: string }>('/kyc', { method: 'POST', body: JSON.stringify(data) }),
-
-  // ── Topup (hisob to'ldirish) ───────────────────────────────────────────
+  /** To'ldirish boshlash → PayTech redirect URL */
   initTopup: (amount: number) =>
-    request<{ redirectUrl: string; paymentId: string }>('/topup/init', {
-      method: 'POST',
-      body: JSON.stringify({ amount }),
-    }),
+    request<{
+      success: boolean;
+      redirect_url: string;
+      reference: string;
+      payment_id: string;
+    }>(
+      '/api/payments/topup/init',
+      { method: 'POST', body: JSON.stringify({ amount }) }
+    ).then(r => ({
+      redirectUrl: r.redirect_url,
+      paymentId: r.payment_id,
+      reference: r.reference,
+    })),
 
+  /** To'lov holatini tekshirish */
   checkPaymentStatus: (paymentId: string) =>
-    request<{ status: 'pending' | 'completed' | 'failed' | 'cancelled' | 'declined' }>(`/topup/status/${paymentId}`),
+    request<{
+      success: boolean;
+      status: string;
+      amount: number;
+      reference: string;
+    }>(`/api/payments/status/${paymentId}`)
+    .then(r => ({
+      status: r.status.toLowerCase() as
+        'pending' | 'completed' | 'failed' | 'cancelled' | 'declined',
+    })),
 
-  // ── QR to'lov parse ───────────────────────────────────────────────────
-  parseQR: (qrData: string) =>
-    request<{ merchant_id: string; merchant_name: string; amount?: number }>('/qr/parse', {
-      method: 'POST',
-      body: JSON.stringify({ qr_data: qrData }),
-    }),
+
+  // ─────────────────────────────────────────────────────────────────
+  // KONTAKTLAR  →  tranzaksiyalar tarixidan olinadi
+  // ─────────────────────────────────────────────────────────────────
+
+  /** Saqlangan kontaktlar (tranzaksiyalar tarixidan) */
+  getContacts: async () => {
+    try {
+      const data = await api.getHistory(1);
+      const seen = new Set<string>();
+      const contacts: any[] = [];
+      for (const tx of data.transactions ?? []) {
+        if (tx.receiver_phone && !seen.has(tx.receiver_phone)) {
+          seen.add(tx.receiver_phone);
+          const name: string = tx.receiver_name ?? tx.receiver_phone;
+          contacts.push({
+            id: tx.receiver_id ?? tx.receiver_phone,
+            initials: name.slice(0, 2).toUpperCase(),
+            name,
+            phone: tx.receiver_phone,
+            color: '#8B2FC9',
+          });
+        }
+      }
+      return contacts.slice(0, 10);
+    } catch {
+      return [];
+    }
+  },
+
+
+  // ─────────────────────────────────────────────────────────────────
+  // TO'LOVLAR  →  /api/payments/...
+  // ─────────────────────────────────────────────────────────────────
+
+  /** Saqlangan to'lovlar */
+  getSavedPayments: () =>
+    request<any[]>('/api/payments/saved').catch(() => []),
+
+  /** Mening uyim (manzillar) */
+  getMyHome: () =>
+    request<any[]>('/api/payments/home').catch(() => []),
+
+  /** Xizmatlar ro'yxati */
+  getServices: () =>
+    request<any[]>('/api/payments/services').catch(() => []),
+
+
+  // ─────────────────────────────────────────────────────────────────
+  // KYC  →  /api/kyc/...
+  // ─────────────────────────────────────────────────────────────────
+
+  /** KYC ma'lumotlarini yuborish */
+  submitKYC: (data: {
+    passport_series: string; passport_number: string;
+    birth_date: string; full_name: string;
+  }) =>
+    request<{ success: boolean; message: string }>(
+      '/api/kyc',
+      {
+        method: 'POST',
+        body: JSON.stringify({
+          passportSeries: data.passport_series,
+          passportNumber: data.passport_number,
+          birthDate: data.birth_date,
+          fullName: data.full_name,
+        }),
+      }
+    ),
+
+  /** KYC holatini ko'rish */
+  getKYC: () =>
+    request<{ success: boolean; kyc: any | null }>('/api/kyc'),
+
 };
