@@ -1,11 +1,4 @@
 // app/(auth)/login.tsx
-// Foydalanuvchi ro'yxatdan o'tganda yoki kirganida:
-// 1. Telefon raqami kiritiladi
-// 2. SMS kod tasdiqlanadi
-// 3. Yangi foydalanuvchi bo'lsa — ism kiritiladi
-// 4. User ma'lumotlari auth context ga saqlanadi
-// 5. PIN ekraniga yo'naltiriladi
-
 import React, { useState, useRef, useEffect } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
@@ -25,7 +18,7 @@ type Step = 'phone' | 'code' | 'name';
 
 export default function Login() {
   const { t }       = useLang();
-  const { saveUser } = useAuth();  // ← user ni auth context ga saqlash
+  const { setUser } = useAuth();  // ← saveUser → setUser
 
   const [step, setStep]       = useState<Step>('phone');
   const [phone, setPhone]     = useState('');
@@ -33,7 +26,7 @@ export default function Login() {
   const [name, setName]       = useState('');
   const [loading, setLoading] = useState(false);
   const [timer, setTimer]     = useState(0);
-  const [verifiedUser, setVerifiedUser] = useState<any>(null); // token kelgandan keyin saqlash
+  const [verifiedUser, setVerifiedUser] = useState<any>(null);
 
   const timerRef     = useRef<ReturnType<typeof setInterval> | null>(null);
   const fadeAnim     = useRef(new Animated.Value(1)).current;
@@ -57,7 +50,6 @@ export default function Login() {
     }, 1000);
   }
 
-  // Telefon raqamini formatlash
   const digits = phone.replace(/\D/g, '');
   function dispPhone(d = digits.slice(0, 12)) {
     if (!d) return '';
@@ -68,7 +60,6 @@ export default function Login() {
     return `+${d.slice(0,3)} ${d.slice(3,5)} ${d.slice(5,8)} ${d.slice(8,10)} ${d.slice(10,12)}`;
   }
 
-  // 1-bosqich: SMS yuborish
   async function sendCode() {
     if (digits.length < 12) {
       Alert.alert(t('error'), t('enterPhone')); return;
@@ -85,7 +76,6 @@ export default function Login() {
     } finally { setLoading(false); }
   }
 
-  // 2-bosqich: SMS kodni tasdiqlash
   async function verifyCode() {
     if (code.length < 4) {
       Alert.alert(t('error'), t('enterCode')); return;
@@ -94,18 +84,13 @@ export default function Login() {
     try {
       const res = await api.verifyCode(`+${digits}`, code);
 
-      // Token ni saqlash
       await SecureStore.setItemAsync(KEYS.TOKEN, res.token);
 
       if (res.user?.fullName) {
-        // Mavjud foydalanuvchi — ismi bor
-        // Auth context ga saqlaymiz
-        saveUser(res.user);
-        // PIN bor bo'lsa pin-lock, yo'q bo'lsa create-pin
+        setUser(res.user);  // ← o'zgartirildi
         const pin = await SecureStore.getItemAsync(KEYS.PIN);
         router.replace(pin ? '/(auth)/pin-lock' : '/(auth)/create-pin');
       } else {
-        // Yangi foydalanuvchi — ismi yo'q, kiritishni so'raymiz
         setVerifiedUser(res.user);
         fadeAnim.setValue(0);
         setStep('name');
@@ -115,20 +100,14 @@ export default function Login() {
     } finally { setLoading(false); }
   }
 
-  // 3-bosqich: Ism saqlash (yangi foydalanuvchi)
   async function saveName() {
     if (!name.trim()) {
       Alert.alert(t('error'), t('enterName')); return;
     }
     setLoading(true);
     try {
-      // Backendga ismni saqlash
       const updatedUser = await api.updateProfile({ fullName: name.trim() });
-
-      // Auth context ga yangilangan user ni saqlash
-      saveUser({ ...verifiedUser, fullName: name.trim(), ...updatedUser });
-
-      // PIN yaratish ekraniga o'tish
+      setUser({ ...verifiedUser, fullName: name.trim(), ...updatedUser });  // ← o'zgartirildi
       router.replace('/(auth)/create-pin');
     } catch (e: any) {
       Alert.alert(t('error'), e.message);
@@ -155,7 +134,6 @@ export default function Login() {
       >
         <View style={s.inner}>
 
-          {/* Logo */}
           <View style={s.logoWrap}>
             <LinearGradient colors={C.gBrand} style={s.logoBox}>
               <Text style={s.logoTxt}>P</Text>
@@ -165,7 +143,6 @@ export default function Login() {
 
           <Animated.View style={[s.card, { opacity: fadeAnim }]}>
 
-            {/* ── 1-bosqich: Telefon ─────────────────────────── */}
             {step === 'phone' && (
               <>
                 <Text style={s.stepTitle}>{t('welcome')} 👋</Text>
@@ -199,7 +176,6 @@ export default function Login() {
               </>
             )}
 
-            {/* ── 2-bosqich: SMS kod ─────────────────────────── */}
             {step === 'code' && (
               <>
                 <TouchableOpacity
@@ -220,7 +196,6 @@ export default function Login() {
                   onChangeText={v => {
                     const clean = v.replace(/\D/g, '').slice(0, 6);
                     setCode(clean);
-                    // 6 raqam to'liq kirilganda avtomatik tasdiqlash
                     if (clean.length === 6) setTimeout(() => verifyCode(), 100);
                   }}
                   keyboardType="numeric"
@@ -253,7 +228,6 @@ export default function Login() {
               </>
             )}
 
-            {/* ── 3-bosqich: Ism (yangi foydalanuvchi) ─────────── */}
             {step === 'name' && (
               <>
                 <Text style={s.stepTitle}>{t('enterName')} 👤</Text>
