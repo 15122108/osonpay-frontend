@@ -3,7 +3,7 @@
 
 import * as SecureStore from 'expo-secure-store';
 
-const BASE = process.env.EXPO_PUBLIC_API_URL ?? 'https://your-backend.onrender.com';
+const BASE = 'https://osonpay-backend-1.onrender.com';
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const token = await SecureStore.getItemAsync('app_token');
